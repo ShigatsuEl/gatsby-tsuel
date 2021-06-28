@@ -1,6 +1,7 @@
 import * as React from "react"
 import { Helmet } from "react-helmet"
 import { useStaticQuery, graphql } from "gatsby"
+import { Query } from "gatsby-graphql"
 
 interface SEOProps {
   description?: string
@@ -10,9 +11,9 @@ interface SEOProps {
 }
 
 const Seo = ({ description = "", lang = "kr", meta = [], title }: SEOProps) => {
-  const { site } = useStaticQuery(
+  const { site } = useStaticQuery<Query>(
     graphql`
-      query {
+      query Seo {
         site {
           siteMetadata {
             title
@@ -24,8 +25,9 @@ const Seo = ({ description = "", lang = "kr", meta = [], title }: SEOProps) => {
     `
   )
 
-  const metaDescription: string = description || site.siteMetadata.description
-  const defaultTitle: string = site.siteMetadata?.title
+  const metaDescription: string =
+    description || site?.siteMetadata?.description!
+  const defaultTitle: string = site?.siteMetadata?.title!
 
   return (
     <Helmet
@@ -57,7 +59,7 @@ const Seo = ({ description = "", lang = "kr", meta = [], title }: SEOProps) => {
         },
         {
           name: `twitter:creator`,
-          content: site.siteMetadata?.author || ``,
+          content: site?.siteMetadata?.author || ``,
         },
         {
           name: `twitter:title`,
