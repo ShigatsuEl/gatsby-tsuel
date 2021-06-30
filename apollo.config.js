@@ -3,7 +3,7 @@ module.exports = {
     includes: [
       "./src/**/*.tsx",
       "./src/**/*.ts",
-      "./node_modules/gatsby-transformer-sharp/src/fragments.js",
+      "./node_modules/gatsby-*/**/fragments.js",
     ],
     service: {
       name: "gatsby-graphql",

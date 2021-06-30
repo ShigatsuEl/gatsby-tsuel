@@ -1,7 +1,6 @@
 import * as React from "react"
 import { Helmet } from "react-helmet"
 import { useStaticQuery, graphql } from "gatsby"
-import { Query } from "gatsby-graphql"
 
 interface SEOProps {
   description?: string
@@ -11,9 +10,9 @@ interface SEOProps {
 }
 
 const Seo = ({ description = "", lang = "kr", meta = [], title }: SEOProps) => {
-  const { site } = useStaticQuery<Query>(
+  const { site } = useStaticQuery(
     graphql`
-      query Seo {
+      query SeoPageQeury {
         site {
           siteMetadata {
             title

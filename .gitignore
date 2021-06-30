@@ -68,5 +68,8 @@ yarn-error.log
 # Yarn Integrity file
 .yarn-integrity
 
+# GraphQL
+src/types/graphql.d.ts
+
 # Project Memoirs'
 memoirs/
