@@ -1,9 +1,11 @@
 import * as React from 'react';
 import { useStaticQuery, graphql } from 'gatsby';
+import { ThemeProvider } from 'styled-components';
 
-import '@src/components/layout.css';
 import Header from '@src/components/header';
 import { LayoutPageQuery } from '@gql-types/graphql';
+import { theme } from '@src/styles/theme';
+import { GlobalStyle } from '@src/styles/global-styled';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -21,7 +23,8 @@ const Layout = ({ children }: LayoutProps) => {
   `);
 
   return (
-    <>
+    <ThemeProvider theme={theme}>
+      <GlobalStyle />
       <Header siteTitle={data.site?.siteMetadata?.title || `Title`} />
       <div
         style={{
@@ -41,7 +44,7 @@ const Layout = ({ children }: LayoutProps) => {
           <a href="https://www.gatsbyjs.com">Gatsby</a>
         </footer>
       </div>
-    </>
+    </ThemeProvider>
   );
 };
 
