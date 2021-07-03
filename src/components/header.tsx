@@ -17,6 +17,8 @@ const Header = ({ siteTitle }: HeaderProps) => (
         margin: `0 auto`,
         maxWidth: 960,
         padding: `1.45rem 1.0875rem`,
+        display: `flex`,
+        justifyContent: `space-between`,
       }}
     >
       <h1 style={{ margin: 0 }}>
@@ -30,6 +32,15 @@ const Header = ({ siteTitle }: HeaderProps) => (
           {siteTitle}
         </Link>
       </h1>
+      <nav>
+        <ul>
+          <li>
+            <Link to="/blog/" style={{ color: `white` }}>
+              Blog
+            </Link>
+          </li>
+        </ul>
+      </nav>
     </div>
   </header>
 );
