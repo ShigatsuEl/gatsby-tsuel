@@ -1,5 +1,5 @@
 import React from 'react';
-import { graphql } from 'gatsby';
+import { graphql, Link } from 'gatsby';
 
 import Layout from '@src/components/layout';
 import { BlogAllMarkDownRemark } from '@src/types/graphql';
@@ -18,9 +18,11 @@ const BlogPage = ({ data }: BlogPageProps) => {
           <ul>
             {data.allMarkdownRemark.edges.map(({ node }) => (
               <li key={node.id}>
-                <h3>{node.frontmatter?.title}</h3>
-                <h4>{node.frontmatter?.date}</h4>
-                <p>{node.excerpt}</p>
+                <Link to={node.fields?.slug ?? '/404/'}>
+                  <h3>{node.frontmatter?.title}</h3>
+                  <h4>{node.frontmatter?.date}</h4>
+                  <p>{node.excerpt}</p>
+                </Link>
               </li>
             ))}
           </ul>
@@ -40,6 +42,9 @@ export const query = graphql`
           frontmatter {
             title
             date(formatString: "DD MMMM, YYYY")
+          }
+          fields {
+            slug
           }
           excerpt
         }

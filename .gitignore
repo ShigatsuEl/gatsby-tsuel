@@ -71,5 +71,8 @@ yarn-error.log
 # GraphQL
 src/types/graphql.d.ts
 
+# Content
+blog/
+
 # Project Memoirs'
 memoirs/
