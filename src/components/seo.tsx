@@ -1,15 +1,15 @@
-import * as React from "react"
-import { Helmet } from "react-helmet"
-import { useStaticQuery, graphql } from "gatsby"
+import * as React from 'react';
+import { Helmet } from 'react-helmet';
+import { useStaticQuery, graphql } from 'gatsby';
 
 interface SEOProps {
-  description?: string
-  lang?: string
-  meta?: Array<{ name: string; content: string }>
-  title: string
+  description?: string;
+  lang?: string;
+  meta?: Array<{ name: string; content: string }>;
+  title: string;
 }
 
-const Seo = ({ description = "", lang = "kr", meta = [], title }: SEOProps) => {
+const Seo = ({ description = '', lang = 'kr', meta = [], title }: SEOProps) => {
   const { site } = useStaticQuery(
     graphql`
       query SeoPageQeury {
@@ -21,12 +21,11 @@ const Seo = ({ description = "", lang = "kr", meta = [], title }: SEOProps) => {
           }
         }
       }
-    `
-  )
+    `,
+  );
 
-  const metaDescription: string =
-    description || site?.siteMetadata?.description!
-  const defaultTitle: string = site?.siteMetadata?.title!
+  const metaDescription: string = description || site?.siteMetadata?.description!;
+  const defaultTitle: string = site?.siteMetadata?.title!;
 
   return (
     <Helmet
@@ -70,7 +69,7 @@ const Seo = ({ description = "", lang = "kr", meta = [], title }: SEOProps) => {
         },
       ].concat(meta)}
     />
-  )
-}
+  );
+};
 
-export default Seo
+export default Seo;

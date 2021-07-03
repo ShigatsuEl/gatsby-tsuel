@@ -1,12 +1,12 @@
-import * as React from "react"
-import { useStaticQuery, graphql } from "gatsby"
+import * as React from 'react';
+import { useStaticQuery, graphql } from 'gatsby';
 
-import "@src/components/layout.css"
-import Header from "@src/components/header"
-import { LayoutPageQuery } from "@gql-types/graphql"
+import '@src/components/layout.css';
+import Header from '@src/components/header';
+import { LayoutPageQuery } from '@gql-types/graphql';
 
 interface LayoutProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 const Layout = ({ children }: LayoutProps) => {
@@ -18,7 +18,7 @@ const Layout = ({ children }: LayoutProps) => {
         }
       }
     }
-  `)
+  `);
 
   return (
     <>
@@ -42,7 +42,7 @@ const Layout = ({ children }: LayoutProps) => {
         </footer>
       </div>
     </>
-  )
-}
+  );
+};
 
-export default Layout
+export default Layout;

@@ -1,8 +1,8 @@
-import * as React from "react"
-import { Link } from "gatsby"
+import * as React from 'react';
+import { Link } from 'gatsby';
 
 interface HeaderProps {
-  siteTitle: string
+  siteTitle: string;
 }
 
 const Header = ({ siteTitle }: HeaderProps) => (
@@ -32,6 +32,6 @@ const Header = ({ siteTitle }: HeaderProps) => (
       </h1>
     </div>
   </header>
-)
+);
 
-export default Header
+export default Header;

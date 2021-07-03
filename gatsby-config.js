@@ -1,4 +1,4 @@
-const path = require("path")
+const path = require('path');
 
 module.exports = {
   siteMetadata: {
@@ -15,6 +15,15 @@ module.exports = {
     `gatsby-plugin-typescript-checker`,
     `gatsby-transformer-sharp`,
     {
+      resolve: 'gatsby-plugin-eslint',
+      options: {
+        stages: ['develop'],
+        extensions: ['js', 'jsx', 'ts', 'tsx'],
+        exclude: ['node_modules', '.cache', 'public'],
+        // Any eslint-webpack-plugin options below
+      },
+    },
+    {
       resolve: `gatsby-plugin-manifest`,
       options: {
         name: `gatsby-starter-default`,
@@ -27,11 +36,11 @@ module.exports = {
       },
     },
     {
-      resolve: "gatsby-plugin-root-import",
+      resolve: 'gatsby-plugin-root-import',
       options: {
-        "@src": path.join(__dirname, "src"),
-        "@pages": path.join(__dirname, "src/pages"),
-        "@gql-types": path.join(__dirname, "src/types"),
+        '@src': path.join(__dirname, 'src'),
+        '@pages': path.join(__dirname, 'src/pages'),
+        '@gql-types': path.join(__dirname, 'src/types'),
       },
     },
     {
@@ -45,4 +54,4 @@ module.exports = {
     // To learn more, visit: https://gatsby.dev/offline
     // `gatsby-plugin-offline`,
   ],
-}
+};
