@@ -25,6 +25,15 @@ const BlogPage = ({ data }: BlogPageProps) => {
                 </Link>
               </li>
             ))}
+            {data.allMdx.edges.map(({ node }) => (
+              <li key={node.id}>
+                <Link to={`/${node.slug}` ?? '/404/'}>
+                  <h3>{node.frontmatter?.title}</h3>
+                  <h4>{node.frontmatter?.date}</h4>
+                  <p>{node.excerpt}</p>
+                </Link>
+              </li>
+            ))}
           </ul>
         </article>
       </section>
@@ -46,6 +55,20 @@ export const query = graphql`
           fields {
             slug
           }
+          excerpt
+        }
+      }
+    }
+    allMdx {
+      edges {
+        node {
+          id
+          frontmatter {
+            title
+            path
+            date(formatString: "MMMM DD, YYYY")
+          }
+          slug
           excerpt
         }
       }
