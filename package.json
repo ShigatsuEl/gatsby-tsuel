@@ -64,6 +64,7 @@
     "serve": "gatsby serve",
     "clean": "gatsby clean",
     "test": "echo \"Write tests! -> https://gatsby.dev/unit-testing\" && exit 1",
+    "lint": "eslint --ignore-path .gitignore . --ext ts --ext tsx --ext js --ext jsx",
     "apollo:codegen": "rimraf src/types/graphql.d.ts && apollo client:codegen src/types/graphql.d.ts --target=typescript --tagName=graphql --outputFlat"
   },
   "repository": {

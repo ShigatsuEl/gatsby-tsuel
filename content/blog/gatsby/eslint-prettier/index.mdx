@@ -1,0 +1,260 @@
+---
+title: Gatsby에 ESLint와 Prettier 설정하기 (with TS)
+date: 2021-07-05
+slug: /blog/gatsby/elist-prettier
+---
+
+# Gatsby에 ESLint와 Prettier 설정하기 (with TS)
+
+Gatsby에 TypeScript를 적용했는데 왜 ESLint와 Prettier를 설정해야 하나요?
+
+확실히 우리는 지금 Type을 사용해 런타임으로 발생하는 에러를 잡을 수 있습니다.
+
+하지만 우리는 타입 외에 문법적으로나 논리적으로 규칙이 존재하지 않기 때문에 종종 코드를 나만의 규칙으로 적어나가는데
+
+이것은 추후 런타임 버그를 일으킬 확률이 있으며 누군가와 협업을 하기 위해 코드를 통합해야 할 때 같은 코드지만 다르게 보여 헷갈릴 수 있습니다.
+
+혼자 프로젝트를 진행한다면 필요없는 과정일 수 있으나 런타임 버그와 포맷팅을 위해서라도 설정하는 것이 좋습니다.
+
+## ESLint
+
+`ESLint`는 EcmaScript 코드에서 문제점을 검사하고 일부는 더 나은 코드로 정정하는 역할을 합니다.
+
+예를 들어 코드에서 문법적으로 또는 논리적인 규칙을 따르지 않았을 때
+
+>잠깐만!
+>>지금 여기 이렇게 코딩하는 것은 나중에 버그를 유발할지도 몰라~
+>>>이걸 고치는 게 나중에라도 좋을걸? :rage:
+
+하면서 에디터에 빨간줄로 경고해 줄 것 입니다.
+
+이러한 규칙들은 TypeScript와 다르게 경고만 하며 프로젝트를 빌드하는 데에는 큰 문제가 되지는 않습니다.
+
+린트의 목적은 경고를 통해 우리가 더 나은 코드를 작성하도록 유도하는 것이기 때문입니다.
+
+`ESLint`를 사용하기 위해서는 다음과 같은 전제조건이 필요합니다.
+
+1. ESLint Extension 설치
+
+  VSCode에는 ESLint Extension이 존재합니다.
+
+  설치하여 에디터가 실행될 때마다 ESLint도 같이 사용할 수 있도록 해줍시다.
+
+2. Gatsby Plugin ESLint 설정
+
+  ESLint에는 TypeScript를 맞춤으로 한 기본 설정을 제공합니다.
+
+  - dependencies 추가
+
+    ```
+    npm install gatsby-plugin-eslint
+    npm install eslint
+    npm install eslint-webpack-plugin
+    ```
+
+  - gatsby-config.js 설정
+
+    ```js
+    module.exports = {
+      plugins: [
+        // ...other plugins
+        {
+          resolve: 'gatsby-plugin-eslint',
+          options: {
+            stages: ['develop'],
+            extensions: ['js', 'jsx'],
+            exclude: ['node_modules', '.cache', 'public'],
+            // Any eslint-webpack-plugin options below
+          }
+        }
+      ]
+    }
+    ```
+
+    gatsby-config.js 외에 gatsby로 시작하는 파일을 설정한 후에는 서버를 재시작하는 것이 좋습니다.
+
+3. .eslintrc.js 설정
+
+  - .eslintrc.js 생성
+
+    `.eslintrc.js`를 생성하는 방법은 총 2가지 입니다.
+
+    eslint가 global하게 설치되어 있다면
+
+    ```
+    npx eslint --init
+    ```
+
+    명령어를 사용해 구성해보세요.
+
+    또는
+
+    프로젝트의 Root Directory에 `.eslintrc.js` 파일을 수동으로 생성하는 것 입니다.
+
+  - dependencies 추가
+
+    ```
+    npm install -D @typescript-eslint/eslint-plugin
+    npm install -D @typescript-eslint/parser
+    npm install -D eslint-plugin-react
+    npm install -D eslint-plugin-prettier
+    npm install -D eslint-config-prettier
+    ```
+
+  - .eslintrc.js 구성
+
+    제가 구성한 .eslintrc.js는 아래와 같습니다.
+
+    ```js
+    module.exports = {
+      parser: '@typescript-eslint/parser',
+      extends: [
+        'eslint:recommended',
+        'plugin:react/recommended',
+        'plugin:@typescript-eslint/recommended',
+        'plugin:prettier/recommended',
+        'prettier',
+      ], // 추천하는 Rule의 집합이다.
+      settings: {
+        react: {
+          version: 'detect', // 리액트 사용
+        },
+      },
+      env: {
+        browser: true,
+        node: true,
+        es6: true,
+      },
+      plugins: ['@typescript-eslint', 'prettier', 'react'],
+      parserOptions: {
+        ecmaFeatures: {
+          jsx: true, // 리액트를 사용하므로 true로 설정한다.
+        },
+        ecmaVersion: 2018, // Allows for the parsing of modern ECMAScript features
+        sourceType: 'module', // Allows for the use of imports
+      },
+    };
+    ```
+
+    그리고 추가로 설정한 rule들은 아래와 같습니다.
+
+    ```js
+    rules: {
+      // Disable prop-types as we use TypeScript for type checking
+      'react/prop-types': 'off',
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/explicit-module-boundary-types': 'off',
+      // interface start with capital I
+      '@typescript-eslint/interface-name-prefix': 'off',
+      // allow "any" as type
+      '@typescript-eslint/no-explicit-any': 'off',
+      // allow @ts-ignore for testing purposes
+      '@typescript-eslint/ban-ts-ignore': 'off',
+      // allow require statement not part of import statement
+      '@typescript-eslint/no-var-requires': 'off',
+      // allow forbidden null assertion
+      '@typescript-eslint/no-non-null-assertion': 'off',
+      '@typescript-eslint/no-non-null-asserted-optional-chain': 'off',
+      // Enable prettier rules
+      'prettier/prettier': [
+        'error',
+        {
+          endOfLine: 'auto',
+        },
+      ],
+    }
+    ```
+
+    ESLint의 자세한 부분은 :point_right: [ESLint](https://eslint.org/ 'ESLint')에서 확인 하시길 바랍니다.
+
+    .eslintrc.js 파일을 저장했는지 확인하고 에디터를 재시작 하면 에디터에 적용된 부분을 확인할 수 있습니다.
+
+    만약 재시작을 한 후에도 변경된 부분이 보이지 않는다면 VSCode의 `settings.json`에 다음을 추가해 보세요.
+
+    ```json
+    "eslint.validate": [
+      {
+        "language": "javascript",
+        "autoFix": true
+      },
+      {
+        "language": "javascriptreact",
+        "autoFix": true
+      },
+      {
+        "language": "typescript",
+        "autoFix": true
+      },
+      {
+        "language": "typescriptreact",
+        "autoFix": true
+      }
+    ],
+    ```
+
+    ESLint가 불평하는 부분을 찾으셨나요? :grin:
+
+  - scripts 구성
+
+    여기서 우리는 ESLint가 불평하는 부분을 하나하나 찾아다니길 원하지 않습니다.
+
+    package.json -> scripts 프로퍼티에 lint 구문을 추가하여 한번에 모두 찾아보도록 하겠습니다.
+
+    ```
+    "scripts": {
+      "lint": "eslint --ignore-path .gitignore . --ext ts --ext tsx --ext js --ext jsx",
+    }
+    ```
+
+    ESLint가 정상적으로 동작하나요요? :relaxed:
+
+## Prettier
+
+`Prettier`는 포맷터로 ESLint가 검사하고 코드를 보기 좋게 format하는 기능을 가지고 있습니다.
+
+ESLint가 마저 포맷하지 못한 부분까지 포맷해주므로 항상 함께 사용해주는 것이 좋습니다.
+
+1. Prettier Extension 설치
+
+  VSCode Extension에서 Prettier를 설치
+
+2. prettierrc 설정
+
+  default stater library를 사용했다면 디렉토리 내에 prettierrc 파일이 미리 생성되어 있는 것을 볼 수 있습니다.
+
+  ```
+  {
+    "singleQuote": true,
+    "parser": "typescript",
+    "semi": true,
+    "useTabs": false,
+    "tabWidth": 2,
+    "trailingComma": "all",
+    "printWidth": 100,
+    "arrowParens": "always"
+  }
+  ```
+
+  parser는 typescript로 지정해 주시기 바랍니다.
+
+  다른 부분은 여러분이 원하는 설정으로 세팅하시면 됩니다.(참고 :point_right: [Prettier](https://prettier.io/docs/en/index.html 'Prettier'))
+
+### 정리
+
+TypeScript에 ESLint와 Prettier를 추가함으로써 규칙적인 문법(rule)이 생겼으며 코드를 저장하면 알아서 포맷팅해주게 되었습니다.
+
+멋지네요! 우리는 이제 더 이상 나은 개발 환경에서 코드를 작성할 수 있게 되었습니다. :wink:
+
+이제 다음으로 설정할 부분은 Gatsby에서 사용하는 GraphQL에 관한 부분입니다.
+
+아직 모르시는 분들도 계실테고 아시는 분들도 계시겠지만 Gatsby에서는 Server로부터 받아올 데이터를 모두 GraphQL로부터 받아오게 됩니다.
+
+하지만 우리는 GraphQL에서 받아온 데이터의 타입을 전혀 가지고 있지 않습니다.
+
+때문에 우리는 그에 대한 타입을 작성해야 할 필요가 있습니다만
+
+그렇다고 해서 우리는 GraphQL로부터 필요한 데이터 타입을 직접 작성하지 않을 것 입니다.
+
+다음 글에서 제가 어떻게 타입을 작성하지 않고 사용할 수 있었는지에 대한 부분을 설명하도록 하겠습니다. :sunglasses:
+
+:clap: 여기까지 고생 많으셨습니다. :clap:
