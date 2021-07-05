@@ -27,7 +27,7 @@ const BlogPage = ({ data }: BlogPageProps) => {
             ))}
             {data.allMdx.edges.map(({ node }) => (
               <li key={node.id}>
-                <Link to={`/${node.slug}` ?? '/404/'}>
+                <Link to={`/${node.slug}`.replace(/\/$/m, '') ?? '/404/'}>
                   <h3>{node.frontmatter?.title}</h3>
                   <h4>{node.frontmatter?.date}</h4>
                   <p>{node.excerpt}</p>

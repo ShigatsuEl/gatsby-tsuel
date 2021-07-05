@@ -1,0 +1,369 @@
+---
+title: Gatsby에 TypeScript 설정하기
+date: 2021-07-05
+slug: /blog/gatsby/typescript
+---
+
+# Gatsby에 TypeScript 설정하기
+
+이 글은 본인이 프로젝트에서 사용한 TypeScript 설정과 커스터마이징 부분을 녹아내었습니다.
+
+TypeScript를 Gatsby에 적용하는 방법이 궁금하신 분들을 위해 제가 프로젝트를 토대로 경험한 부분을 공유해보고자 합니다.
+
+## 순서
+
+  1. [Project Start](#project-start)
+  2. [Gatsby Plugin TypeScript](#gatsby-plugin-typeScript)
+  3. [Gatsby Plugin Type Checker](#gatsby-plugin-type-checker)
+  4. [Gatsby Project Clean Up](#gatsby-project-clean-up)
+
+### Project Start
+
+타입스크립트를 적용하기 앞서 Gastby를 통해 Project를 생성하도록 하겠습니다.
+
+가장 먼저 확인해야 할 것은 `gatsby-cli`가 설치되어 있는지 확인하는 것 입니다.
+
+Shell을 통해 `gatsby-cli`가 설치되어 있는지 확인해 봅시다.
+
+```
+gatsby --version
+```
+
+버전이 확인되셨나요?
+
+만약 Gatsby 버전을 확인할 수 없고 실행할 수 없는 명령어로 인식된다면 아래의 방법으로 해결하시기 바랍니다.
+
+1. `npm install -g gatsby-cli`
+2. 윈도우의 경우 고급 시스템 설정 -> 환경변수 -> Path변수에 npm이 등록되어 있는가?
+3. 명령어 프롬프트 바꾸어 진행하기
+
+Gatsby를 실행할 수 있다면 프로젝트를 생성해봅시다.
+
+```
+gatsby new [SITE_DIRECTORY] [URL_OF_STARTER_GIT_REPO]
+```
+
+[SITE_DIRECTORY]는 프로젝트를 생성할 디렉토리 위치를 나타내고
+
+[URL_OF_STARTER_GIT_REPO]는 프로젝트에 적용할 Starter Library의 깃 주소를 말합니다.
+
+Starter Library가 무엇인지 모르신다면 -> [이 사이트](https://www.gatsbyjs.com/starters/?)에서 확인해 보시길 바랍니다.
+
+또는 Starter Library를 적용시키고 싶지 않다면
+
+```
+gatsby new
+```
+or
+```
+gatsby new [SITE_DIRECTORY]
+```
+중에 선택하시면 됩니다.
+
+기본적으로 Starter Library를 적용시키지 않으면 `gatsby-starter-default`가 자동으로 적용됩니다.
+
+명령어 실행이 완료되면 디렉토리로 이동하여
+
+```
+gatsby develop
+```
+
+명령어를 실행해 서버를 시작해 보도록 하겠습니다.
+
+만약 서버가 실행되지 않는다면 디렉토리 내에 `node_modules`가 존재하는지 확인하시기 바랍니다.
+
+가끔 무슨 이유에서인지 Starter Library를 적용하는 구간에서 npm install이 실패하는 경우가 있습니다.
+
+```
+npm install -> gatsby develop
+```
+
+서버가 잘 실행된다면 `http://localhost:8000`으로 접속하여 자신의 Gatsby 프로젝트가 정상적으로 동작하는 것을 확인하실 수 있습니다.
+
+축하합니다! 여러분의 첫번째 Gatsby Server를 생성했습니다. :heart_eyes:
+
+### Gatsby Plugin TypeScript
+
+이제 본격적으로 타입스크립트를 프로젝트에 적용해 보겠습니다.
+
+Gatsby는 TypeScript를 지원하는 플랫폼입니다.
+
+또한 Gatsby는 기본적으로 TypeScript를 사용할 수 있도록 세팅되어 있습니다.
+
+따라서 우리가 따로 해줘야 할 것은 그다지 없습니다.
+
+단지, 여러분의 파일 확장자를 `.js | .jsx` -> `.ts | .tsx`로 변경하여 바로 사용할 수 있습니다.
+
+`src/pages/index.tsx`
+```tsx
+import React from "react"
+import { PageProps } from "gatsby"
+
+export default function IndexRoute(props: PageProps) {
+  return (
+    <>
+      <h1>Path:</h1>
+      <p>{props.path}</p>
+    </>
+  )
+}
+```
+
+이것은 우리가 Gatsby 프로젝트를 생성하면서 자동으로 `gatsby-plugin-typescript`가 추가되었기 때문입니다.
+
+그러므로 프로젝트에서 TypeScript를 사용하기 위해 위 플러그인을 설치하지 않아도 TypeScript를 사용할 수 있습니다.
+
+하지만 우리가 사용할 프로젝트는 TypeScript를 통합하여 사용할 것이므로 다른 세팅을 필요로 합니다.
+
+1. gatsby-plugin-typescript 추가
+
+  먼저 `gatsby-plugin-typescript`를 프로젝트에 추가하도록 하겠습니다.
+
+  ```
+  npm install typescript -D
+  npm install gatsby-plugin-typescript
+  ```
+
+  그리고 gatsb-config 설정을 하겠습니다.
+
+  `gatsby-config.js`
+  ```js
+  module.exports = {
+    plugins: [
+      `gatsby-plugin-typescript`,
+    ]
+  }
+  ```
+
+2. tsconfig.json 추가
+
+  - Shell에서 `tsc --init` 엔터
+
+  - `tsconfig.json` 설정하기
+
+    제가 설정한 tsconfig는 다음과 같습니다.
+
+    `tsconfig.json`
+    ```json
+    {
+      "compilerOptions": {
+        /* Basic Options */
+        "target": "es6", 
+        "module": "esnext",
+        "lib": ["dom", "dom.iterable", "esnext"]
+        "allowJs": true,
+        "jsx": "react", 
+        "noEmit": true,
+        "isolatedModules": true,
+
+        /* Strict Type-Checking Options */
+        "strict": true
+
+        /* Module Resolution Options */
+        "moduleResolution": "node",
+        "baseUrl": ".",
+        "esModuleInterop": true,
+
+        /* Advanced Options */
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true
+      },
+      "exclude": ["node_modules", "public", ".cache"],
+      "include": ["**/*.ts", "**/*.tsx"]
+    }
+    ```
+
+어떤가요? :blush:
+
+이제 우리는 tsx | ts 파일 내에서 Type 오류를 확인할 수 있습니다.(아무런 타입 오류도 볼 수 없다면 확장자를 다시 한 번 확인하시고 에디터를 재시작 하시길 바랍니다.)
+
+이 상태로도 충분히 좋습니다.
+
+에디터에서 타입 오류를 알려주는 것만으로도 개발 환경이 쾌적해질 것 입니다.
+
+한가지 더 추가해보고 싶은 기능이 있다면 타입 오류가 존재한다면 누군가 알려줄 수 있게 해주는 것 입니다.
+
+지금 TypeScript는 오류를 빨간색으로 확인할 수는 있지만 Gatsby Server에서는 아무런 문제 없이 동작합니다.
+
+프로젝트가 커짐에 따라 파일이 많아지면 모든 파일을 확인하여 타입 오류가 존재하는지 체크하는 것은 굉장히 하드할지도 모릅니다.
+
+따라서 저는 프로젝트에서 타입 오류가 생긴다면
+
+>야. 너 지금 타입오류를 발생시켰어!
+
+라고 말해줄 수 있는 친구가 필요합니다.
+
+### Gatsby Plugin Type Checker
+
+`gatsby-plugin-typescript-checker` 플러그인은 Gatsby 프로젝트를 진행하면서 타입 오류가 발생하면 바로 프로젝트 에러를 발생시키며 터미널에서 에러를 알려주도록 도와줍니다.
+
+1. gatsby-plugin-typescript-checker 추가
+
+  ```
+  npm install gatsby-plugin-typescript-checker
+  ```
+  
+2. gatsby-config.js 설정
+
+  `gatsby-config.js`
+  ```js
+  module.exports = {
+    plugins: [
+        'gatsby-plugin-typescript',
+        'gatsby-plugin-typescript-checker'
+    ]
+  }
+  ```
+
+gatsby-plugin-typescript-checker 플러그인을 사용하기 위해서는 **gatsby-plugin-typescript를 반드시 plugins property에 추가해줘야 합니다.**
+
+gatsby-plugin-typescript 플러그인은 원래 자동으로 import되어 있지만 다른 플러그인 또는 option을 추가하기 위해서는 명시해줘야 정상적으로 작동합니다.
+
+이제 우리는 Type Error가 발생하면 Gatsby Server에서 다음과 같이 에러를 확인할 수 있습니다.
+
+![Type Checker](./example-01.png 'Type Checker Example')
+
+### Gatsby Project Clean Up
+
+Gatsby TypeScript 세팅은 마무리 되었습니다.
+
+이제 Gatsby Project를 정리하고 TypeScript를 적용해보도록 하겠습니다.
+
+1. 사용하지 않는 파일들 정리
+
+  ```
+  rm gatsby-node.js
+  rm gatsby-browser.js
+  rm gatsby-ssr.js
+  ```
+
+2. @types/react | @types/react-dom
+
+  ```
+  npm install @types/react @types/react-dom
+  ```
+
+3. 모든 `.js` 컴포넌트를 -> `.tsx` 컴포넌트로 변경
+
+4. PropTypes -> Interface 교체
+
+  - SEO
+
+    `src/components/seo.js`
+    ```tsx
+    import React from "react"
+    import PropTypes from "prop-types" -> **delete this!**
+    import { Helmet } from "react-helmet"
+    import { useStaticQuery, graphql, } from "gatsby"
+
+          ].concat(meta)}
+        />
+      )
+    }
+
+    SEO.defaultProps = {
+      lang: `en`,
+      meta: [],
+      description: ``,
+    } -> delete this!
+
+    SEO.propTypes = {
+      description: PropTypes.string,
+      lang: PropTypes.string,
+      meta: PropTypes.arrayOf(PropTypes.object),
+      title: PropTypes.string.isRequired,
+    } -> delete this!
+
+    export default SEO
+    ```
+
+    :point_down:
+
+    `src/components/seo.tsx`
+    ```tsx
+    import React from "react"
+    import { Helmet } from "react-helmet"
+    import { useStaticQuery, graphql, } from "gatsby"
+
+    interface SEOProps {
+      description?: string,
+      lang?: string,
+      meta?: Array<{name: string, content: string}>,
+      title: string
+    }
+
+    const Seo = ({ description = '', lang = 'kr', meta = [], title }: SEOProps) => {
+      const { site }: any = useStaticQuery(
+        graphql`
+          query {
+            site {
+              siteMetadata {
+                title
+                description
+                author
+              }
+            }
+          }
+        `
+      )
+
+      const metaDescription: string = description || site?.siteMetadata?.description ?? '';
+      const defaultTitle: string = site?.siteMetadata?.title ?? '';
+
+      return (
+        <Helmet
+          ...
+          ].concat(meta)}
+        />
+      );
+    };
+
+    export default SEO
+    ```
+
+  - Layout
+
+    `src/components/layout.js`
+    ```jsx
+    import React from "react"
+    import PropTypes from "prop-types" -> delete this!
+    import { useStaticQuery, graphql, } from "gatsby"
+
+    Layout.propTypes = {
+      children: PropTypes.node.isRequired,
+    } -> delete this!
+
+    export default Layout
+    ```
+
+    :point_down:
+
+    ```tsx
+    import React, { ReactNode } from "react"
+    import { useStaticQuery, graphql, } from "gatsby"
+
+    import Header from "./header"
+    import "./layout.css"
+
+    interface LayoutProps {
+      children: ReactNode
+    }
+
+    const Layout = ({ children }: LayoutProps) => {
+    ```
+
+  pages 디렉토리의 index와 404도 동일하게 적용해 줍시다.
+
+여기까지 오시느라 고생하셨습니다. :relaxed:
+
+이제 우리는 TypeScript를 사용해 아주 안정적으로 코드를 작성해 나갈 수 있습니다.
+
+하지만 TypeScript를 좀 더 완벽하게 사용하려면 아직 몇 단계가 더 남아있습니다.
+
+Type 문법을 제시하는 린터기와 코드를 보기 좋게 만들어주는 포맷터를 설정해야 하며
+
+그 외에 Gatsby GraphQL 서버로부터 받아오는 schema type을 어떻게 작성할 것인지에 대한 방법이 필요합니다.
+
+궁금하신가요?<br/><br/>
+
+:heart_eyes: 다음 글에서 이어서 하도록 하겠습니다 :heart_eyes:
