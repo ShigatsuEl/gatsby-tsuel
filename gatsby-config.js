@@ -1,4 +1,5 @@
 const path = require('path');
+const emoji = require(`remark-emoji`);
 
 module.exports = {
   siteMetadata: {
@@ -40,6 +41,16 @@ module.exports = {
     {
       resolve: `gatsby-plugin-mdx`,
       options: {
+        gatsbyRemarkPlugins: [
+          `gatsby-remark-autolink-headers`,
+          {
+            resolve: `gatsby-remark-images`,
+            options: {
+              maxWidth: 1200,
+            },
+          },
+        ],
+        remarkPlugins: [emoji],
         defaultLayouts: {
           default: path.join(__dirname, 'src/components/layout.tsx'),
         },

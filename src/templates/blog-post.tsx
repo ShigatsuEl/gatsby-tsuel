@@ -11,9 +11,10 @@ interface BlogPostProps {
 const BlogPost = ({ data: { markdownRemark } }: BlogPostProps) => {
   return (
     <Layout>
-      <div>Hello blog post</div>
-      <section>
+      <header>
         <h1>{markdownRemark?.frontmatter?.title}</h1>
+      </header>
+      <section>
         <article>
           <div>
             <div dangerouslySetInnerHTML={{ __html: markdownRemark?.html! }}></div>
