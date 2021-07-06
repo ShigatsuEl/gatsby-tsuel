@@ -108,3 +108,54 @@ useStaticQuery 무슨 말인지 정확히는 몰라도 useStaticQuery 훅을 사
 확인하고 싶으신가요? 다음 링크로 연결해봅시다.
 
 :point_right: [localhost:8000/__graphql](http://localhost:8000/__graphql 'Gatsby GraphQL')
+
+## Gatsby GraphiQL Server
+
+아직 사용 방법을 모르신다고 해도 괜찮습니다! :blush:
+
+가장 왼쪽 Explorer 탭은 여러분이 GraphQL이 가지고 있는 Schema를 눈으로 확인할 수 있습니다.
+
+그리고 중간에 있는 탭은 query문을 직접 작성해 볼 수 있는 공간이며
+
+마지막 오른쪽은 query 결과를 출력하여 우리 눈으로 확인할 수 있도록 도와줍니다.
+
+우리가 해볼 작업은 다음과 같습니다.
+
+1. Explorer 탭에서 site -> siteMetadata -> title 순으로 클릭한다.
+
+2. Query가 클릭한 순으로 작성되어 있는지 확인한다.
+
+3. GraphiQL 옆에 있는 Play 버튼을 클릭하여 결과를 확인하자.
+
+![Example](./example-010.PNG 'Gatsby GraphiQL Result')
+
+data.site.siteMetadata.title의 값을 찾았습니다!
+
+그렇습니다. 우리는 Gatsby가 제공해주는 GraphiQL 서버로부터 data를 받아올 수 있었던 것 입니다.
+
+하지만 data.site.siteMetadata.title 값을 제공한 적이 없는데 어떻게 이 값을 받아올 수 있는지 궁금해 하시는 분들이 계실수도 있습니다.
+
+`gatsby-config.js` 파일을 열어보면 다음과 같이 세팅되어 있는 부분을 찾을 수 있습니다.
+
+`gatsby-config.js`
+```js
+module.exports = {
+  siteMetadata: {
+    title: `Gatsby Default Starter`,
+    description: `Kick off your next, great Gatsby project with this default starter. This barebones starter ships with the main Gatsby configuration files you might need.`,
+    author: `@gatsbyjs`,
+  },
+}
+```
+
+Gatsby Default Starter Library를 사용하고 있다면 이미 제공되어 있는 siteMetadata값이 존재한다는 것을 확인해볼 수 있습니다.
+
+>아하!
+>>그렇다면 우리는 gatsby-*.js 값을 설정하면 GraphQL Server로부터 그 값을 받아오는 구조를 가지고 있구나.
+>>잘만 이용하면 page별로 일일이 값을 설정하지 않고도 전역으로 사용할 데이터를 graphql로부터 받아오면 훨씬 편리할수도 있겠네.
+
+:clap::clap::clap::clap:
+
+이제 Gatsby가 GraphQL 기반으로 동작한다는 점을 이해하실 수 있습니다. :sunglasses:
+
+하지만 한가지 문제점이 아직 남아 있습니다.
