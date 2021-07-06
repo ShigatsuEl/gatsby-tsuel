@@ -1,0 +1,110 @@
+---
+title: Gatsby에 GraphQL과 Apollo를 사용해 타입 추가하기
+date: 2021-07-06
+slug: /blog/gatsby/graphql-apollo
+---
+
+# Gatsby에 GraphQL과 Apollo를 사용해 타입 추가하기
+
+지금까지 우리는 TypeScript를 사용하기 위해 여러가지를 추가해왔습니다.
+
+먼저 JavaScript에서 TypeScript로 확장하기 위해 Gatsby TypeScript Plugin을 추가하고 tsconfig를 설정했습니다.
+
+그리고 더 나은 개발환경에서 작업하기 위해 Linter & Formatter 구성도 하였습니다.
+
+하지만 이것만으로 Gatsby에서 TypeScript를 100% 활용한다고 하기에는 무리가 있습니다.
+
+바로 설명을 시작하도록 하겠습니다.
+
+## Gatsby는 어떻게 data를 받아오는가?
+
+프로젝트에서 `Layout` 컴포넌트를 살펴보겠습니다.
+
+`src/components/layout.tsx`
+```tsx
+const Layout = ({ children }: LayoutProps) => {
+  const data = useStaticQuery(graphql`
+    query {
+      site {
+        siteMetadata {
+          title
+        }
+      }
+    }
+  `);
+
+  return (
+    <ThemeProvider theme={theme}>
+      <GlobalStyle />
+      <Header siteTitle={data.site.siteMetadata.title || `Title`} />
+  ...
+```
+
+Layout 컴포넌트는 Gatsby에서 page를 만들 때 반드시 필요한 컴포넌트입니다.
+
+`http://localhost:8000/`을 요청하면 home 라우트에 필요한 `src/pages/index` 컴포넌트를 가져와 사용하게 되는데
+
+index 컴포넌트는 다시 Layout 컴포넌트에서 children으로 사용되고 있습니다.
+
+`src/pages/index.tsx`
+```tsx
+const IndexPage = () => (
+  <Layout>
+    <Seo title="Home" />
+    <h1>Hi people</h1>
+    <p>Welcome to your new Gatsby site.</p>
+    ...
+  </Layout>
+);
+```
+
+이처럼 Gatsby에서는 모든 page가 Layout 컴포넌트를 사용하게 되는데
+
+Layout 컴포넌트를 자세히 살펴보면 Header 컴포넌트의 siteTitle prop에 `data.site.siteMetadata.title`을 넘겨주고 있습니다.
+
+이쯤되면 이러한 생각이 들 수 있습니다.
+
+>???
+>>data.site.siteMetadata.title은 갑자기 어디서 튀어나오는 녀석이지?
+>>진짜 Header의 값으로 data.site.siteMetadata.title이 적용되어 있는 것 일까?
+
+확인해보기 위해 `gatsby deelop` 명령어로 서버를 시작하고 `http://localhost:8000`으로 요청하면 다음과 같은 Header를 볼 수 있습니다.
+
+![Example](./example-09.PNG 'Gatsby siteTitle')
+
+:scream::scream:
+
+놀랍습니다!
+
+`Gatsby Starter Library`라는 문구는 `data.site.siteMetadata.title`라는 값을 통해 얻어올 수 있었습니다.
+
+그렇다면 data는 어디서 받아오는지 우리는 찾아내야만 합니다.
+
+Layout 컴포넌트를 자세히 살펴보시면 위에
+
+`src/components/layout.tsx`
+```tsx
+const data = useStaticQuery(graphql`
+  query {
+    site {
+      siteMetadata {
+        title
+      }
+    }
+  }
+`);
+```
+
+data의 값을 얻는 방법에 대해 알아볼 수 있습니다.
+
+useStaticQuery 무슨 말인지 정확히는 몰라도 useStaticQuery 훅을 사용해 graphql로부터 data를 요청하고 있습니다.
+
+신기하게 생각할 수도 있습니다.
+
+그도 그럴게 우리는 어떠한 graphql 서버롤 직접 연결할 적이 없습니다.
+
+하지만 Gatsby는 우리를 위해 미리 graphql 서버를 구성해두었습니다.
+
+확인하고 싶으신가요? 다음 링크로 연결해봅시다.
+
+:point_right: [localhost:8000/__graphql](http://localhost:8000/__graphql 'Gatsby GraphQL')
