@@ -196,3 +196,96 @@ Gatsby Default Starter Library를 사용하고 있다면 이미 제공되어 있
 
 저는 이것을 매우 귀찮다고 생각했기 때문에 좀 더 짱돌을 굴려보기로 결심했습니다. :smiling_imp:
 
+## GraphQL Apollo 구성하기
+
+기왕 TypeScript를 사용하기로 결정지은 이상 GraphQL 사용방식도 Type을 곁들이듯이 안전하게 사용하고 싶었습니다.
+
+query를 작성할 때마다 auto complete 할수 있도록 지원하기 위해서는 GraphQL과 Apollo의 연결이 필수적임을 느꼈기 때문에
+
+저는 Gatsby가 추천하는 방법과 플러그인을 싹다 제껴버리고 GraphQL과 Apollo를 연결해보는 시도를 해보았습니다.
+
+제가 시도한 절차는 다음과 같습니다.
+
+### Apollo Config 생성하기
+
+가장 먼저 `apollo-config.js` 파일을 루트 디렉토리에서 생성하였습니다.
+
+그리고 설정 방법은 다음과 같습니다.
+
+`apollo-config.js`
+```js
+module.exports = {
+  client: {
+    includes: ['./src/**/*.tsx', './src/**/*.ts', './node_modules/gatsby-*/**/fragments.js'],
+    service: {
+      name: 'gatsby-graphql',
+      url: 'http://localhost:8000/__graphql',
+    },
+    tagName: 'graphql',
+  },
+};
+
+```
+
+코드를 조금만 설명해보면 우리는 graphql을 client(React)에서 사용할 것이므로
+
+`'./src/**/*.tsx', './src/**/*.ts', './node_modules/gatsby-*/**/fragments.js'`에 해당하는 파일들에 대해
+
+graphql이라는 tag를 발견하면 그에 대한 type을 생성하도록 할 것 입니다.
+
+또한 client에서 작성하는 query뿐만 아니라 Gatsby GraphiQL Server에서 사용하는 모든 Schema Type 역시 필요하므로 추가한 부분입니다.
+
+<br/><br/>
+
+이것으로 `apollo-config.js` 구성은 끝입니다.
+
+### VSCode Extension
+
+다음으로 할 것은 VSCode Extension 설치 부분입니다.
+
+아래의 2가지 Extension을 설치 하시기 바랍니다.
+
+1. GraphQL
+2. Apollo GraphQL
+
+그런 후에 에디터를 닫습니다.
+
+이제 우리는 알아야 할 중요한 사실이 하나 있습니다.
+
+**앞으로 VSCode를 열기전에 반드시 서버를 먼저 가동한 후에 열어야 합니다.**
+
+VSCode를 먼저 연 상태에서 서버를 가동하면 Extension이 GraphQL과 연결된 사실을 인지하지 못합니다. :sob:
+
+반드시 에디터를 열기전에 git bash 또는 powershell와 같은 명령 프롬프트 창에서 서버를 가동시킨 후에 에디터를 실행하시길 바랍니다.
+
+![Example](./example-11.PNG 'Git Bash Server Start')
+
+<br/><br/>
+
+에디터를 열고 graphql 태그가 존재하는 파일 아무거나 열어보면 다음과 같이 graphql이 연결되어 있는지 확인하시기 바랍니다.
+
+<br/><br/>
+
+![Example](./example-04.PNG 'GraphQL Extension')
+
+<br/><br/>
+
+또한 Apollo GraphQL Extension을 클릭해서 다음과 같이 Apollo 구성이 제대로 되었는지도 확인하시기 바랍니다.
+
+![Example](./example-05.PNG 'Apollo GraphQL Extension')
+
+여기까지 잘 따라오셨나요? :wink:
+
+Extension이 정상적으로 동작하고 있다면 우리는 이제 원하던 것을 볼 수 있습니다.
+
+따라란~ :musical_note::musical_note::musical_note:
+
+![Example](./example-02.png 'GraphQL Query')
+
+<br/><br/>
+
+아.. 너무 멋집니다.:heart:
+
+이제 우리는 더 이상 query를 잘못 작성해 server가 에러를 받을 일도 일어나지 않을 것이며
+
+귀찮게 GraphiQL에서 copy & paste 하는 짓을 하지 않아도 됩니다.
