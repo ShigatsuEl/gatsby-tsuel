@@ -1,0 +1,88 @@
+---
+title: Gatsby에서 Markdown을 사용해 Blog 만들기
+date: 2021-07-07
+slug: /blog/gatsby/markdown
+---
+
+# Gatsby에서 Markdown을 사용해 Blog 만들기
+
+블로그를 만든다고 상상해봅시다.
+
+React를 사용해서 우리가 포스팅하고 싶은 글을 한문장씩 jsx태그로 감싸주고
+
+다 작성해온 글에 대한 경로를 만들기 위해 Router를 일일이 만들어주는 것 입니다.
+
+생각만 해도 끔찍합니다. :scream:
+
+물론 1~2개의 포스팅 정도는 수작업으로 찍어낼 수 있겠습니다.
+
+하지만 100개가 넘어가는 글을 써야한다면..? :frowning:
+
+<br/><br/>
+
+Gastby는 바로 이러한 상황에 우리에게 아주 유용한 도움을 줄 수 있는 도구이자 프레임워크입니다.
+
+또한 Gatsby는 정적 페이지를 만들기 위해 Markdown을 사용하는데 이를 어떻게 이용하는지 지금부터 알아보도록 할 것 입니다.
+
+## Gatsby Source Filesystem
+
+우리는 먼저 Gatsby에게 우리가 Blog를 만들 때 사용할 Markdown을 어느 곳에 위치시킬 것인지 알려줄 필요가 있습니다.
+
+그것을 도와주는 Plugin이 존재합니다.
+
+### Gatsby Source Filesystem
+
+1. 플러그인 설치
+
+  `npm install gatsby-source-filesystem`
+
+2. Gatsby 설정 수정하기
+
+  `gatsby-config.js`
+  ```js
+  module.exports = {
+    plugins: [
+      {
+        resolve: `gatsby-source-filesystem`,
+        options: {
+          name: `content`,
+          path: `${__dirname}/content/`,
+        },
+      }
+    ]
+  }
+  ```
+
+  여기서 주의해야 할 점은 반드시 우리가 Markdown을 생성할 디렉토리로 path를 지정해야 한다는 것 입니다.
+
+  저는 최상위 디렉토리에서 content라는 디렉토리를 만들고 그 안에서 blog를 위한 Markdown을 작성하도록 하겠습니다.
+
+### Gatsby Transformer Remark
+
+Gatsby Source Filesystem 플러그인 설정을 마쳤다면 다음은 Gatsby Transformer Remark를 설정하도록 하겠습니다.
+
+1. 플러그인 설치
+
+  `npm install gatsby-transformer-remark`
+
+2. Gatsby 설정 수정하기
+
+  `gatsby-config.js`
+  ```js
+  module.exports = {
+    plugins: [
+      {
+        resolve: `gatsby-source-filesystem`,
+        options: {
+          name: `content`,
+          path: `${__dirname}/content/`,
+        },
+      },
+      `gatsby-transformer-remark`
+    ]
+  }
+  ```
+
+  Gatsby Transformer Remark는 추후에 Markdown의 직접적인 연관을 가지며
+
+  우리가 작성한 Markdown을 HTML 태그로 바꿔주는 역할을 하게 됩니다.
