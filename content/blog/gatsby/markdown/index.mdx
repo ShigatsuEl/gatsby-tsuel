@@ -24,7 +24,7 @@ Gastby는 바로 이러한 상황에 우리에게 아주 유용한 도움을 줄
 
 또한 Gatsby는 정적 페이지를 만들기 위해 Markdown을 사용하는데 이를 어떻게 이용하는지 지금부터 알아보도록 할 것 입니다.
 
-## Gatsby Source Filesystem
+## Gatsby Markdown 관련 플러그인 설치하기
 
 우리는 먼저 Gatsby에게 우리가 Blog를 만들 때 사용할 Markdown을 어느 곳에 위치시킬 것인지 알려줄 필요가 있습니다.
 
@@ -86,3 +86,46 @@ Gatsby Source Filesystem 플러그인 설정을 마쳤다면 다음은 Gatsby Tr
   Gatsby Transformer Remark는 추후에 Markdown의 직접적인 연관을 가지며
 
   우리가 작성한 Markdown을 HTML 태그로 바꿔주는 역할을 하게 됩니다.
+
+## Gatsby All Markdown Remark
+
+[Gatsby Transformer Remark](#gatsby-transformer-remark)까지 완료했다면 이제 설정할 것은 더이상 없습니다.
+
+이제 우리는 Markdown을 생성해 보도록 하겠습니다.
+
+자신이 위에서 설정한 path에서 Markdown 파일을 하나 생성해보세요~
+
+저는 루트 디렉토리의 content 디렉토리에서 `test-markdown.md` 파일을 생성해보도록 하겠습니다.
+
+```
+---
+title: 첫 번째 포스트
+date: 2021-07-07
+---
+
+테스트 중 입니다!
+```
+
+`---` 사이에 있는 문구는 나중에 frontmatter로 사용하게 되는데 `---` 사이에 입력하지 않으면
+
+다음에 GraphQL에서 값을 받아올 수 없게 됩니다. 꼭 위처럼 입력하시길 바랍니다. :smirk:
+
+파일 저장이 완료되었는지 확인하신 후에 서버를 재시작 해주세요.
+
+그 후 [http://localhost:8000/__graphql](http://localhost:8000/__graphql 'GraphQL Server')로 들어가 봅시다.
+
+Explorer 탭을 확인해보면 원래 없었던 것이 생겨났습니다. 과연 무엇일까요?
+
+`allMarkdownRemark`와 `markdownRemark` 속성이 생겨났습니다! :+1:
+
+아주 좋습니다.
+
+allMarkdownRemark :point_right: edges :point_right: node :point_right: frontmatter :point_right: title 순으로 체크를 해주신 후 쿼리를 실행해봅시다.
+
+![Example](./example-01.PNG 'GraphiQL Query Result')
+
+위와 같이 결과가 나옵니까? 그렇다면 성공적으로 Markdown 플러그인을 통해 Page를 생성한 것 입니다!
+
+아직 Page를 두눈으로 볼수는 없지만 머지않아 볼 수 있게 될 것 입니다.
+
+여러분이 해야할 것은 다음으로 넘어가기전에 내가 작성한 Markdown이 allMarkdownRemark query 내에 어디에 있는지 찾아보는 것 입니다.
