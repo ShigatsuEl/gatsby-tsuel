@@ -139,3 +139,28 @@ Mdx를 사용하기에 가장 적합한 상황일 수 있습니다.
 
   더 자세한 옵션 설정은 [Gatsby Plugin Mdx](https://www.gatsbyjs.com/plugins/gatsby-plugin-mdx/ 'Gatsby Plugin Mdx')에서 확인하시기 바랍니다.
 
+## Mdx Page 생성하기
+
+여러분이 위의 2가지 방법 중 어떤 것을 고르셨던 간에 자신이 설정한 path에서 `test-mdx.mdx` 파일을 생성하시길 바랍니다.
+
+저는 루트 디렉토리에 있는 `content` 디렉토리에서 생성하도록 하겠습니다.
+
+`content/test-mdx.mdx`
+```
+---
+title: Test Mdx
+date: 2021-07-07
+---
+
+Mdx를 테스트 중 입니다!
+```
+
+저장 후, 서버를 재시작 하시기 바랍니다.
+
+[httpl:localhost:8000/__graphql](httpl:localhost:8000/__graphql 'GraphiQL Server')로 가시면 Explorer 탭에 전에는 없던 것이 생겨난 것을 확인할 수 있습니다.
+
+그것은 바로 `allMdx`와 `mdx` 속성입니다.
+
+이것은 곧 Gatsby가 우리가 생성한 `test-mdx.mdx`파일의 위치를 정확히 인식하고 있다는 말이 됩니다.
+
+만약 `allMdx` 또는 `mdx`가 존재하지 않는다면 위에서 실수한 것이 없는지 확인해 보십시오.
