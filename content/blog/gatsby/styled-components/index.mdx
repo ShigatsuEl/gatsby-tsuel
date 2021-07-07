@@ -193,3 +193,104 @@ Redux나 useContext 훅을 사용해 보았다면 ThemeProvider의 역할이 그
 마찬가지로 한 곳에 스타일을 저장해두고 필요할 때마다 가져와 사용할 수 있게 하는 것이 ThemeProvider의 역할입니다.
 
 Style의 중복 재정의를 피하기 위해 ThemeProvider에서 정의하여 여러곳에서 사용할 수 있도록 하는 것이 여러모로 편리할 것 입니다.
+
+## Global Styles 정의
+
+아직 끝난 것이 아닙니다.
+
+전역적으로 스타일을 지정하는 방식이 남아있습니다.
+
+Styled Components에서 전역적으로 스타일을 지정하는 방법은 `createGlobalStyle` 함수를 사용하는 것으로
+
+다음과 같이 지정해 볼 수 있습니다.
+
+1. global-styled.ts 생성
+
+  `src/styles/global-styled.ts`
+  ```ts
+  import { createGlobalStyle } from 'styled-components';
+
+  export const GlobalStyle = createGlobalStyle`
+
+    * {
+      box-sizing: border-box;
+    }
+
+    a {
+      text-decoration:none;
+      cursor: pointer;
+    }
+
+    ul, ol, li {
+      list-style: none;
+    }
+  `;
+  ```
+
+2. Reset CSS vs Nomalize CSS
+  
+  `src/styles/global-styled.ts`
+  ```ts
+  import { createGlobalStyle } from 'styled-components';
+  import { normalize } from 'styled-normalize';
+
+  export const GlobalStyle = createGlobalStyle`
+    ${normalize}
+
+    * {
+      box-sizing: border-box;
+    }
+
+    a {
+      text-decoration:none;
+      cursor: pointer;
+    }
+
+    ul, ol, li {
+      list-style: none;
+    }
+  `;
+
+  ```
+
+  Reset CSS는 Gatsby Starter Library에 기본으로 지정되어 있는 CSS 설정을 전부 초기화 시켜주고
+
+  Nomalize CSS는 초기화는 시키지만 어느정도 가미되어 있는 것을 원하는 경우에 사용합니다.
+
+  무엇을 선택할지는 여러분의 선택에 맡기겠습니다.
+
+  저는 시작으로 normalize css를 선택했으며 추후에 마음에 들지않으면 변경할 계획입니다.
+
+3. global style 적용하기
+
+  `src/components/layout.tsx`
+  ```tsx
+  import { GlobalStyle } from '@src/styles/global-styled';
+
+  ...
+  const Layout = ({ children }: LayoutProps) => {
+    return (
+      <ThemeProvider theme={theme}>
+        <GlobalStyle />
+        <Header siteTitle={data.site?.siteMetadata?.title || `Title`} />
+        ...
+      </ThemeProvider>
+    )
+  }
+  ```
+
+  이제 서버를 재시작하고 홈페이지로 가보세요. :satisfied:
+
+  적용했을 때와 안했을 경우 style이 달라진 것을 확실히 알 수 있습니다. 
+
+훌륭합니다!
+
+이제 무엇이 남았나요?
+
+우리는 이제 더 이상 Gatsby에서 따로 설정해줄 것들이 남아있어 보이진 않습니다.
+
+해냈습니다. :sunglasses: 우리는 이제 Gatsby의 핵심 기능인 정적 사이트로 블로그 만들기 또는 포르폴리오 페이지를 생성할 수 있습니다.
+
+그리고 원한다면 Gatsby에서 제공하는 플러그인으로 더욱 멋진 기능을 만들어볼 수도 있을 것 입니다.
+
+우리가 지금까지 구성해온 TypeScript를 사용해서 말입니다. :heart_eyes::heart_eyes:
