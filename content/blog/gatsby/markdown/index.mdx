@@ -129,3 +129,181 @@ allMarkdownRemark :point_right: edges :point_right: node :point_right: frontmatt
 아직 Page를 두눈으로 볼수는 없지만 머지않아 볼 수 있게 될 것 입니다.
 
 여러분이 해야할 것은 다음으로 넘어가기전에 내가 작성한 Markdown이 allMarkdownRemark query 내에 어디에 있는지 찾아보는 것 입니다.
+
+## Blog Page 생성하기
+
+우리는 이제 우리가 작성한 Markdown이 어디에 보관이 되고 있는지 알고 있습니다.
+
+그 점을 이용해 Blog를 만들 것이며 그전에 Blog Page를 먼저 생성해보도록 하겠습니다.
+
+1. Blog Page 생성하기
+
+  `src/pages` 디렉토리 내에 `blog.tsx`를 생성하도록 하겠습니다.
+
+  `src/pages/blog.tsx`
+  ```tsx
+  const BlogPage = () => {
+    return (
+      <Layout>
+        <h1>Blog Page</h1>
+      </Layout>
+    );
+  };
+  ```
+
+2. GraphQL Query 작성하기
+
+  Blog 컴포넌트는 `pages` 디렉토리 내에 위치해 있습니다.
+
+  때문에 query는 Blog Compoennts 바깥에서 이루어져야 합니다.
+
+  `src/pages/blog.tsx`
+  ```tsx
+  const BlogPage = () => {
+    return (
+      <Layout>
+        <h1>Blog Page</h1>
+      </Layout>
+    );
+  };
+
+  export const query = graphql`
+    query BlogAllMarkDownRemark {
+      allMarkdownRemark {
+        totalCount
+        edges {
+          node {
+            id
+            frontmatter {
+              title
+              date(formatString: "DD MMMM, YYYY")
+            }
+            excerpt
+          }
+        }
+      }
+    }
+  `;
+  ```
+
+3. Query Data 인터페이스 작성하기
+
+  Query Data의 Type을 어디서 가져오죠? 직접 작성해야 하나요?
+
+  아닙니다. 우리는 예전에 *Gatsby에 GraphQL과 Apollo를 사용해 타입 추가하기*라는 글에서 이것을 해결하기 위한 방안을 제시했습니다.
+
+  만약 위 글을 보시지 않으셨다면 글을 보시고 오는 것을 추천드리겠습니다.
+
+  글을 봤다는 가정하에
+
+  `npm run apollo:codegen` 명령어를 실행해봅시다.
+
+  이제 `src/types/graphql.d.ts`에 타입이 생성되었을 것 입니다.
+
+  그대로 인터페이스를 작성해보도록 합시다.
+
+  :point_down:
+
+  `src/pages/blog.tsx`
+  ```tsx
+  import { BlogAllMarkDownRemark } from '@src/types/graphql';
+
+  interface BlogPageProps {
+    data: BlogAllMarkDownRemark;
+  }
+  ```
+
+4. 인터페이스 적용하기
+
+  아래가 최종적으로 적용된 Blog Page 컴포넌트입니다.
+
+  `src/pages/blog.tsx`
+  ```tsx
+  import React from 'react';
+  import { graphql, Link } from 'gatsby';
+  import Layout from '@src/components/layout';
+  import { BlogAllMarkDownRemark } from '@src/types/graphql';
+
+  interface BlogPageProps {
+    data: BlogAllMarkDownRemark;
+  }
+
+  const BlogPage = ({ data }: BlogPageProps) => {
+    return (
+      <Layout>
+        <h1>Blog Page</h1>
+        <h4>{data.allMarkdownRemark.totalCount} Posts</h4>
+        <section>
+          <article>
+            <ul>
+              {data.allMarkdownRemark.edges.map(({ node }) => (
+                <li key={node.id}>
+                  <h3>{node.frontmatter?.title}</h3>
+                  <h4>{node.frontmatter?.date}</h4>
+                  <p>{node.excerpt}</p>
+                </li>
+              ))}
+            </ul>
+          </article>
+        </section>
+      </Layout>
+    );
+  };
+
+  export const query = graphql`
+    query BlogAllMarkDownRemark {
+      allMarkdownRemark {
+        totalCount
+        edges {
+          node {
+            id
+            frontmatter {
+              title
+              date(formatString: "DD MMMM, YYYY")
+            }
+            fields {
+              slug
+            }
+            excerpt
+          }
+        }
+      }
+    }
+  `;
+
+  export default BlogPage;
+  ```
+
+  세이브 이후에 서버를 재시작 해주세요.
+
+[http://localhost:8000](http://localhost:8000 'Home Page')을 확인해봅시다.
+
+>음..? 아무것도 달라진 것이 없네요?
+
+맞습니다. 하지만 잘못된 것은 아닙니다.
+
+우선 [http://localhost:8000/test](http://localhost:8000/test 'Not Page')로 라우트를 이동해 봅시다.
+
+:point_down:
+
+![Example](./example-02.PNG 'Not Page')
+
+위와 같은 화면이 보이시나요?
+
+아마도 여러분의 화면과 제 화면이 다를 수 있습니다.
+
+저는 여러개의 Markdown을 생성했기 때문에 그런 것으로 신경쓰지 않으셔도 됩니다.
+
+집중해야 할 것은 *Pages* 목록 내에 **/blog**가 있을 것 입니다. 클릭해서 이동해 보세요. :point_right: [http://localhost:8000/blog](http://localhost:8000/blog)
+
+:clap::clap::clap::clap:
+
+Blog Page에서 우리가 작성한 Markdown의 내용을 찾았습니다! Yay~!!!:raised_hands:
+
+혹시 모르니 Markdown을 한 개 더 생성해보록 합시다.
+
+`/blog`에 포스팅 리스트가 한개 더 생성된 것을 확인하셨나요?
+
+Gastby는 Hot Loading을 사용하므로 저장하면 자동으로 변경사항이 적용될 것이지만 만약 변경되지 않는다면 서버상태를 확인하고 재시작 하시길 바랍니다.
+
+하지만 이대로는 안됩니다. 우리는 블로그의 리스트를 바라볼 수 있어서야 원하는 포스트 하나도 제대로 확인할 수 없습니다.
