@@ -67,3 +67,129 @@ Gatsby에서 Style을 다루는 방식은 굉장히 다양합니다.
   `npm start` or `gatsby develop`
 
 이것으로 Styled Components 설정은 끝입니다. 굉장히 간단하죵? :yum:
+
+## Styled Components에서 사용할 Type 생성하기
+
+다음으로 우리가 사용할 Theme의 Type을 정의하도록 하겠습니다.
+
+갑자기 왠 Theme의 Type을 정해주는지 이해를 못하실 수도 있습니다.
+
+이것은 우리가 추후에 사용할 Theme의 Type을 ThemeProvider에 제공해주기 위해서 입니다.
+
+아직 Styled Components에 익숙치 않다면 이러한 설명만으로는 이해하기 어려울 수 있습니다.
+
+그러니 말보다 눈으로 보는 것이 훨씬 이해하기 편리하므로 설명은 집어치우고 제가 하는 절차를 일단 그대로 따라해보시면 좋을 것 같습니다.
+
+### styles 디렉토리 생성
+
+1. `src` 디렉토리 내에 하위 디렉토리 `styles` 생성 후 `styled.d.ts` 파일을 생성하겠습니다.
+
+  최종적으로 `src/styles/styled.d.ts`와 같은 구조를 가져야 합니다.
+
+2. styled.d.ts 정의
+
+  제가 설정한 styled.d.ts의 값은 다음과 같습니다.
+
+  `src/styles/styled.d.ts`
+  ```ts
+  import 'styled-components';
+
+  declare module 'styled-components' {
+    export interface DefaultTheme {
+      dark: {
+        mainBackground: string;
+      };
+      light: {
+        mainBackground: string;
+      };
+    }
+  }
+  ```
+
+  저는 나중에 다크모드를 빌드하기 위해 `dark`와 `light` 2가지로 나누어 타입을 정의했습니다.
+
+3. `src/styles` 디렉토리 내에 `theme.ts` 생성
+
+  그리고 아래와 같이 값을 넣도록 하겠습니다.
+
+  :point_down:
+
+  `src/styles/theme.ts`
+  ```ts
+  import { DefaultTheme } from 'styled-components';
+
+  const theme: DefaultTheme = {
+    dark: {
+      mainBackground: '#000000',
+    },
+
+    light: {
+      mainBackground: '#FFFFFF',
+    },
+  };
+
+  export { theme };
+  ```
+
+4. ThemeProvider theme props 추가
+
+  우리가 지금까지 만들어온 Theme는 가장 최상위 컴포넌트에 추가할 것 입니다.
+
+  Gatsby의 최상위 컴포넌트는 Layout 컴포넌트입니다.
+
+  :point_down:
+
+  `src/components/layout.tsx`
+  ```tsx
+  import { theme } from '@src/styles/theme';
+
+  ...
+  const Layout = ({ children }: LayoutProps) => {
+    return (
+      <ThemeProvider theme={theme}>
+        <Header siteTitle={data.site?.siteMetadata?.title || `Title`} />
+        ...
+      </ThemeProvider>
+    )
+  }
+  ```
+
+  ThemeProvider를 최상위 컴포넌트에서 이와 같이 주입하면 하위에 있는 컴포넌트에서 언제든지 theme를 사용할 수 있게 됩니다.
+
+  한 번 확인해볼까요? :wink:
+
+5. theme test하기
+
+  `src/pages/index.tsx`
+  ```tsx
+  const Exmpale = styled.div`
+    background-color: ${(props) => props.theme.dark.mainBackground};
+  `;
+
+  const IndexPage = () => (
+    <Layout>
+      ...
+      <Exmpale />
+    </Layout>
+  )
+  ```
+
+  어떤가요? :sunglasses:
+
+  [http://localhost:8000](http://localhost:8000) 서버에서 home page의 Exmpale 컴포넌트의 배경색은 무슨색인가요?
+
+  검정색이 확인되셨나요? :grin:
+
+이것은 Gatsby가 제공해주는 기능이 아니며 Styled Components만의 강력한 기능입니다.
+
+ThemeProvider에 theme props를 제공해주기만 하면 우리는 ThemeProvider의 하위 컴포넌트에서 사용하는 Styled Components
+
+내부에서 `props.theme`로 접근할 수 있습니다.
+
+게다가 우리는 `styled.d.ts` 파일로부터 interface를 제공해주었기 때문에 VSCode로부터 제공되는 auto complete를 적용할 수 있습니다.
+
+Redux나 useContext 훅을 사용해 보았다면 ThemeProvider의 역할이 그들과 상당히 비슷하다는 것을 알 수 있습니다.
+
+마찬가지로 한 곳에 스타일을 저장해두고 필요할 때마다 가져와 사용할 수 있게 하는 것이 ThemeProvider의 역할입니다.
+
+Style의 중복 재정의를 피하기 위해 ThemeProvider에서 정의하여 여러곳에서 사용할 수 있도록 하는 것이 여러모로 편리할 것 입니다.
