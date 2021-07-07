@@ -206,7 +206,7 @@ allMarkdownRemark :point_right: edges :point_right: node :point_right: frontmatt
 
   `src/pages/blog.tsx`
   ```tsx
-  import { BlogAllMarkDownRemark } from '@src/types/graphql';
+  import { BlogAllMarkDownRemark } from 'src/types/graphql';
 
   interface BlogPageProps {
     data: BlogAllMarkDownRemark;
@@ -221,8 +221,8 @@ allMarkdownRemark :point_right: edges :point_right: node :point_right: frontmatt
   ```tsx
   import React from 'react';
   import { graphql, Link } from 'gatsby';
-  import Layout from '@src/components/layout';
-  import { BlogAllMarkDownRemark } from '@src/types/graphql';
+  import Layout from 'src/components/layout';
+  import { BlogAllMarkDownRemark } from 'src/types/graphql';
 
   interface BlogPageProps {
     data: BlogAllMarkDownRemark;
@@ -260,9 +260,6 @@ allMarkdownRemark :point_right: edges :point_right: node :point_right: frontmatt
             frontmatter {
               title
               date(formatString: "DD MMMM, YYYY")
-            }
-            fields {
-              slug
             }
             excerpt
           }
@@ -307,3 +304,242 @@ Blog Page에서 우리가 작성한 Markdown의 내용을 찾았습니다! Yay~!
 Gastby는 Hot Loading을 사용하므로 저장하면 자동으로 변경사항이 적용될 것이지만 만약 변경되지 않는다면 서버상태를 확인하고 재시작 하시길 바랍니다.
 
 하지만 이대로는 안됩니다. 우리는 블로그의 리스트를 바라볼 수 있어서야 원하는 포스트 하나도 제대로 확인할 수 없습니다.
+
+## Blog Post 생성하기
+
+우리는 allMarkdownRemark을 통해 graphql로부터 블로그 포스팅 리스트를 받아올 수 있습니다.
+
+받아온 블로그 포스트 리스트로부터 각각 경로를 생성해서 markdown을 뿌려줄 수 있다면 우리가 원하던 것을 볼 수 있지 않을까요?
+
+시작해보도록 하겠습니다.
+
+### Gatsby Node 구성
+
+루트 디렉토리에 `gatsby-node.js` 파일을 생성하도록 하겠습니다.
+
+`gatsby-node.js`는 지원하는 메서드가 몇가지 있습니다.
+
+1. onCreateNode
+
+  onCreateNode는 우리가 가지고 있는 파일들에 대해 여러가지 작업을 수행할 것 입니다.
+
+  그 중에서 우리는 `gatsby-source-filesystem` 플러그인으로부터 `fields`를 생성할 것 입니다.
+
+  아래와 같이 구성해주세요.
+
+  :point_down:
+
+  `gatsby-node.js`
+  ```js
+  const { createFilePath } = require(`gatsby-source-filesystem`);
+
+  exports.onCreateNode = ({ node, getNode, actions }) => {
+    const { createNodeField } = actions;
+    if (node.internal.type === `MarkdownRemark`) {
+      const slug = createFilePath({ node, getNode, basePath: `content`, trailingSlash: false });
+      createNodeField({
+        node,
+        name: `slug`,
+        value: slug,
+      });
+    }
+  };
+  ```
+
+  코드에 대해서 잠시만 설명해보자면 onCreateNode 메서드는 node, getNode, actions 파라미터를 가지며
+
+  `actions` 파라미터는 createNodeField 속성을 가집니다.
+
+  우리는 모든 파일 중에서 Markdown 파일을 찾게 된다면 해당파일에 대해 경로를 생성하고 싶습니다.
+
+  위의 코드는 그를 수행하는 역할을 합니다.
+
+2. createPages
+
+  `createPages`는 말 그대로 page를 생성하는 역할을 합니다.
+
+  다시 아래 코드를 추가해주세요.
+
+  :point_down:
+
+  `gatsby-node.js`
+  ```js
+  const path = require('path');
+
+  exports.createPages = async ({ graphql, actions }) => {
+  const { createPage } = actions;
+  const result = await graphql(`
+    query {
+      allMarkdownRemark {
+        edges {
+          node {
+            fields {
+              slug
+            }
+          }
+        }
+      }
+    }
+  `);
+
+  result.data.allMarkdownRemark.edges.forEach(({ node }) => {
+    createPage({
+      path: node.fields.slug,
+      component: path.resolve(`./src/templates/blog-post.tsx`),
+      context: {
+        slug: node.fields.slug,
+      },
+    });
+  });
+  ```
+
+  우리는 GraphQL로부터 `allMarkdownRemark`을 받아올 수 있었습니다.
+
+  `allMarkdownRemark`로부터 하나의 `Markdown`마다 페이지를 생성하게 하고 싶습니다.
+
+  createPage의 path 속성에서 `node` :point_right: `fields` :point_right: `slug`는 onCreateNode로부터 생성한 필드로부터 가져오는 것 입니다.
+
+  그리고 component 속성은 page를 만들 layout 컴포넌트를 적어주는 곳으로 추후에 입력한 경로로부터 page 컴포넌트를 생성하게 됩니다.
+
+  아직은 `src/templates/blog-post` 파일은 존재하지 않습니다. 
+
+  일단은 저장만 하고 넘어가도록 하겠습니다.
+
+이제 `gatsby-node.js`의 최종 구성은 아래와 같습니다.
+
+:point_down:
+
+`gatsby-node.js`
+```js
+const path = require(`path`);
+const { createFilePath } = require(`gatsby-source-filesystem`);
+
+exports.onCreateNode = ({ node, getNode, actions }) => {
+  const { createNodeField } = actions;
+  if (node.internal.type === `MarkdownRemark`) {
+    const slug = createFilePath({ node, getNode, basePath: `content`, trailingSlash: false });
+    createNodeField({
+      node,
+      name: `slug`,
+      value: slug,
+    });
+  }
+};
+
+exports.createPages = async ({ graphql, actions }) => {
+  const { createPage } = actions;
+  const result = await graphql(`
+    query {
+      allMarkdownRemark {
+        edges {
+          node {
+            fields {
+              slug
+            }
+          }
+        }
+      }
+    }
+  `);
+
+  result.data.allMarkdownRemark.edges.forEach(({ node }) => {
+    createPage({
+      path: node.fields.slug,
+      component: path.resolve(`./src/templates/blog-post.tsx`),
+      context: {
+        slug: node.fields.slug,
+      },
+    });
+  });
+};
+```
+
+### Blog Template 생성하기
+
+바로 전에 `gatsby-node.js`에서 Layout 컴포넌트를 지정해주었습니다.
+
+하지만 우리는 아직 Blog 포스트를 만들 Layout 컴포넌트를 생성하지 않았습니다.
+
+:point_down:
+
+1. Blog Post Template 생성
+  
+  `src/template` 디렉토리를 생성하고 `blog-post.tsx` 파일을 생성합니다.
+
+  이름은 무엇이 되었든 상관이 없지만 `gatsby-node.js`에서 createPage component속성에서 지정해준 컴포넌트와 동일해야 합니다.
+
+2. src/template/blog-post.tsx 구성
+
+  저는 `blog-post.tsx`를 아래와 같이 구성하였습니다.
+
+  :point_down:
+
+  `src/templates/blog-post.tsx`
+  ```tsx
+  import React from 'react';
+  import { graphql } from 'gatsby';
+
+  import Layout from '@src/components/layout';
+  import { BlogPostQuery } from '@src/types/graphql';
+
+  interface BlogPostProps {
+    data: BlogPostQuery;
+  }
+
+  const BlogPost = ({ data: { markdownRemark } }: BlogPostProps) => {
+    return (
+      <Layout>
+        <header>
+          <h1>{markdownRemark?.frontmatter?.title}</h1>
+        </header>
+        <section>
+          <article>
+            <div>
+              <div dangerouslySetInnerHTML={{ __html: markdownRemark?.html! }}></div>
+            </div>
+          </article>
+        </section>
+      </Layout>
+    );
+  };
+
+  export const query = graphql`
+    query BlogPostQuery($slug: String!) {
+      markdownRemark(fields: { slug: { eq: $slug } }) {
+        html
+        frontmatter {
+          title
+        }
+      }
+    }
+  `;
+  ```
+
+  query를 작성한 후에 `npm run apollo:codgen`명령어를 실행해줘야 Type을 적용할 수 있다는 점을 잊지 마세요!
+
+정말 길었던 여정이었습니다.
+
+이제 남은 것은 실제로 동작하는지 확인하는 것 입니다.
+
+모든 것을 저장한지 확인한 후에 서버를 재시작 하도록 합시다 :)
+
+[http://localhost:8000/test](http://localhost:8000/test 'Not Page')으로 이동해 볼까요?
+
+`/test-markdown` 라우트가 생겼습니다!
+
+:clap: :clap: :clap: :clap:
+
+클릭해서 이동해보세요. :blush:
+
+```
+---
+title: 첫 번째 포스트
+date: 2021-07-07
+---
+
+테스트 중 입니다!
+```
+
+맨 처음 작성했던 `test-markdown.md` 파일과 내용이 일치하는 것을 확인할 수 있습니다.
+
+이제 거의 다 왔습니다. :sunglasses:
