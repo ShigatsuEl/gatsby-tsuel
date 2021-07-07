@@ -1,0 +1,141 @@
+---
+title: Gatsby에서 Markdown을 Mdx로 업데이트 하기
+date: 2021-07-07
+slug: /blog/gatsby/mdx
+---
+
+# Gatsby에서 Markdown을 Mdx로 업데이트 하기
+
+**이번 포스팅 글은 필수가 아닙니다.**
+
+**Markdown을 Mdx로 변경하길 원하시는 분들만 글을 읽어보시는 것이 좋을 것 같습니다 :)**
+
+**또는 Mdx가 무엇인지 궁금하신 분들이 읽으셔도 좋을 듯 합니다.**
+
+<br/><br/>
+
+Mdx가 무엇인가요?
+
+Mdx를 처음 들어보시는 분들도 계실 것 같습니다.
+
+쉽게 설명하자면 Markdown + JavaScript 정도로 해석할 수 있습니다.
+
+말 그대로 Markdown 안에서 JavaScript 구문을 사용할 수 있게 됩니다.
+
+>굳이 그럴필요까지가 있나?
+
+라고 생각하시는 분들도 계실 수 있습니다.
+
+사실 이 문제에 대한 정답은 없습니다.
+
+필요한 경우가 있으며 필요하지 않을수도 있습니다.
+
+Markdown의 아쉬운 점은 콘텐츠를 Markdown에서 지원하는 문법을 사용하지 않고서는 그저 텍스트에 불과할 뿐 입니다.
+
+*하지만 내가 Markdown을 사용하면서 Markdown 외에 다른 것도 추가해보고 싶다면?*
+
+Mdx를 사용하기에 가장 적합한 상황일 수 있습니다.
+
+예를 들어 리액트에서 사용하는 컴포넌트를 Markdown 내에 적용하여 사용자에게 보여주는 것들이 있을 수 있습니다.
+
+설명만으로 이해가 어려울 수 있으니 Mdx를 직접 업데이트 해보면서 어디가 다른지 느껴보시길 바랍니다.
+
+## Markdown :point_right: Mdx
+
+일단 우리가 지난 글에서 Markdown을 구성하기 위한 설정들은 전부 리셋한 상태라고 가정하겠습니다.
+
+지난 글을 보신분들은 Markdown에서 사용한 플러그인과 설정들을 전부 제거한 후 진행해 주시고
+
+지난 글을 아직 보지 못하신 분들은 바로 아래의 글을 확인하셔도 좋습니다.
+
+1. 플러그인 설치
+
+  ```
+  npm install gatsby-plugin-mdx @mdx-js/mdx @mdx-js/react
+  npm install gatsby-source-filesystem
+  npm install gatsby-page-creator
+  ```
+
+2. gatsby-config.js 구성
+
+  ```js
+  module.exports = {
+    plugins: [
+      // ....
+      `gatsby-plugin-mdx`,
+      {
+        resolve: `gatsby-plugin-page-creator`,
+        options: {
+          path: `${__dirname}/src/pages/`,
+        },
+      },
+      {
+        resolve: `gatsby-source-filesystem`,
+        options: {
+          name: `pages`,
+          path: `${__dirname}/src/pages/`,
+        },
+      },
+    ],
+  }
+  ```
+
+  Mdx는 Markdown과 다르게 `gatsby-node.js`에서 동적으로 page를 생성하지 않습니다.
+
+  대신 이것을 도와주는 플러그인이 있는데 `gatsby-plugin-page-creator`입니다.
+
+  `path`를 어떻게 지정하느냐에 따라 관련된 위치에서 mdx를 찾아 그에 관련된 relative path를 Gatsby가 생성할 것 입니다.
+
+  `gatsby-source-filesystem`은 Markdown과 동일하게 필요합니다.
+
+3. Mdx Page 생성
+
+  `gatsby-plugin-mdx` 플러그인을 어떠한 옵션도 없이 사용하게 되면
+
+  Gatsby는 기본적으로 `src/pages/`에 위치한 Mdx 파일을 찾게 됩니다.
+
+  `src/pages` 디렉토리 위치에 mdx를 생성하고 싶다면 위와 같이 하시면 됩니다.
+
+  저는 이것이 마음에 안드므로 수정할 것 입니다.
+
+  Markdown이던지 Mdx 이던지 상관없이 마크업 파일은 전부 루트 디렉토리에 있는 `content` 디렉토리에 위치하기로 결정했기 때문입니다.
+
+  따라서 다음과 같이 `gatsby-config.js`를 수정하도록 하겠습니다.
+
+  :point_down:
+
+  `gatsby-config.js`
+  ```js
+  const path = require('path')
+
+  module.exports = {
+    plugins: [
+      // ....
+      {
+        resolve: `gatsby-plugin-mdx`,
+        options: {
+          defaultLayouts: {
+            default: path.join(__dirname, 'src/components/layout.tsx'),
+          },
+        },
+      },
+      {
+        resolve: `gatsby-plugin-page-creator`,
+        options: {
+          path: `${__dirname}/content/`,
+        },
+      },
+      {
+        resolve: `gatsby-source-filesystem`,
+        options: {
+          name: `content`,
+          path: `${__dirname}/content/`,
+        },
+      },
+    ]
+  ```
+
+  defaultLayouts 속성으로부터 Layout 컴포넌트를 지정하여 생성되는 Mdx 라우트에서 사용할 Layout을 지정해줍니다.
+
+  더 자세한 옵션 설정은 [Gatsby Plugin Mdx](https://www.gatsbyjs.com/plugins/gatsby-plugin-mdx/ 'Gatsby Plugin Mdx')에서 확인하시기 바랍니다.
+
