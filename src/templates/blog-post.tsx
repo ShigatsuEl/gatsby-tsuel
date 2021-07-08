@@ -1,3 +1,4 @@
+import { MDXRenderer } from 'gatsby-plugin-mdx';
 import React from 'react';
 import { graphql } from 'gatsby';
 
@@ -8,16 +9,16 @@ interface BlogPostProps {
   data: BlogPostQuery;
 }
 
-const BlogPost = ({ data: { markdownRemark } }: BlogPostProps) => {
+const BlogPost = ({ data: { mdx } }: BlogPostProps) => {
   return (
     <Layout>
       <header>
-        <h1>{markdownRemark?.frontmatter?.title}</h1>
+        <h1>{mdx?.frontmatter?.title}</h1>
       </header>
       <section>
         <article>
           <div>
-            <div dangerouslySetInnerHTML={{ __html: markdownRemark?.html! }}></div>
+            <MDXRenderer>{mdx?.body ?? ''}</MDXRenderer>
           </div>
         </article>
       </section>
@@ -27,10 +28,13 @@ const BlogPost = ({ data: { markdownRemark } }: BlogPostProps) => {
 
 export const query = graphql`
   query BlogPostQuery($slug: String!) {
-    markdownRemark(fields: { slug: { eq: $slug } }) {
-      html
+    mdx(fields: { slug: { eq: $slug } }) {
+      body
       frontmatter {
         title
+      }
+      fields {
+        slug
       }
     }
   }

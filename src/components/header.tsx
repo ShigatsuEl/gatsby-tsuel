@@ -35,7 +35,7 @@ const Header = ({ siteTitle }: HeaderProps) => (
       <nav>
         <ul>
           <li>
-            <Link to="/blog/" style={{ color: `white` }}>
+            <Link to="/blog" style={{ color: `white` }}>
               Blog
             </Link>
           </li>

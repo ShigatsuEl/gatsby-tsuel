@@ -11,7 +11,6 @@ module.exports = {
     `gatsby-plugin-gatsby-cloud`,
     `gatsby-plugin-image`,
     `gatsby-plugin-react-helmet`,
-    `gatsby-plugin-remove-trailing-slashes`,
     `gatsby-plugin-sharp`,
     `gatsby-plugin-styled-components`,
     `gatsby-plugin-typescript`,
@@ -51,15 +50,6 @@ module.exports = {
           },
         ],
         remarkPlugins: [emoji],
-        defaultLayouts: {
-          default: path.join(__dirname, 'src/components/layout.tsx'),
-        },
-      },
-    },
-    {
-      resolve: `gatsby-plugin-page-creator`,
-      options: {
-        path: `${__dirname}/content/`,
       },
     },
     {

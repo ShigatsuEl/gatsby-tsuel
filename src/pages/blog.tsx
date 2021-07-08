@@ -12,22 +12,13 @@ const BlogPage = ({ data }: BlogPageProps) => {
   return (
     <Layout>
       <h1>Blog Page</h1>
-      <h4>{data.allMarkdownRemark.totalCount} Posts</h4>
+      <h4>{data.allMdx.totalCount} Posts</h4>
       <section>
         <article>
           <ul>
-            {data.allMarkdownRemark.edges.map(({ node }) => (
-              <li key={node.id}>
-                <Link to={node.fields?.slug ?? '/404/'}>
-                  <h3>{node.frontmatter?.title}</h3>
-                  <h4>{node.frontmatter?.date}</h4>
-                  <p>{node.excerpt}</p>
-                </Link>
-              </li>
-            ))}
             {data.allMdx.edges.map(({ node }) => (
               <li key={node.id}>
-                <Link to={`/${node.slug}`.replace(/\/$/m, '') ?? '/404/'}>
+                <Link to={`${node.fields?.slug}` ?? '/404/'}>
                   <h3>{node.frontmatter?.title}</h3>
                   <h4>{node.frontmatter?.date}</h4>
                   <p>{node.excerpt}</p>
@@ -43,32 +34,18 @@ const BlogPage = ({ data }: BlogPageProps) => {
 
 export const query = graphql`
   query BlogAllMarkDownRemark {
-    allMarkdownRemark {
+    allMdx {
       totalCount
       edges {
         node {
           id
           frontmatter {
             title
-            date(formatString: "DD MMMM, YYYY")
+            date(formatString: "MMMM DD, YYYY")
           }
           fields {
             slug
           }
-          excerpt
-        }
-      }
-    }
-    allMdx {
-      edges {
-        node {
-          id
-          frontmatter {
-            title
-            path
-            date(formatString: "MMMM DD, YYYY")
-          }
-          slug
           excerpt
         }
       }
