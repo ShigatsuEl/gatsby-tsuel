@@ -374,3 +374,56 @@ Example 컴포넌트 내의 텍스트가 빨간색으로 나타나는 것을 확
 축하드립니다! :clap:
 
 하지만 Mdx의 파워는 이것으로 끝이 아닙니다.
+
+### Gatsby Server로부터 데이터를 받아와 Mdx에 적용하기
+
+어떠한 자바스크립트라도 Mdx에 적용할 수 있습니다.
+
+이 말은 컴포넌트가 아닌 데이터도 받아올 수 있다는 의미가 됩니다.
+
+아래와 같이 수정해 보도록 하겠습니다.
+
+`content/test-mdx.mdx`
+```js
+---
+title: Test Mdx
+date: 2021-07-07
+---
+import { graphql } from "gatsby"
+
+Mdx를 테스트 중 입니다!
+<Example>이 문장은 빨간색으로 예상됩니다.</Example>
+
+<p>{props.data.site.siteMetadata.description}</p>
+
+export const pageQuery = graphql`
+  query {
+    site {
+      siteMetadata {
+        description
+        title
+      }
+    }
+  }
+`
+```
+
+그리고 다시 `httpl://localhost:8000/test-mdx`로 이동해보세요.
+
+`description`을 받아오신 것을 보실 수 있나요?
+
+:blush:
+
+Markdown 내에서 JavaScript를 사용할 수 있게 도와주는 Mdx 덕분에 우리는 Markdown 컨텐츠 내에서 동적으로 무언가를 생성할 수 있습니다.
+
+어떠셨나요?
+
+부디 제가 준비한 것이 마음에 드셨으면 좋겠습니다. :heart_eyes:
+
+하지만 반드시 Mdx가 필요한 것은 아닙니다.
+
+자신이 필요한 것이 무엇인지 잘 판단하신 후, 나에게 맞는 것을 선택하는 것이 가장 베스트 일 것 입니다.
+
+Markdown vs Mdx
+
+여러분의 선택은? :eyes:
