@@ -164,3 +164,104 @@ Mdx를 테스트 중 입니다!
 이것은 곧 Gatsby가 우리가 생성한 `test-mdx.mdx`파일의 위치를 정확히 인식하고 있다는 말이 됩니다.
 
 만약 `allMdx` 또는 `mdx`가 존재하지 않는다면 위에서 실수한 것이 없는지 확인해 보십시오.
+
+## Blog Page Query 수정하기
+
+Blog Page 컴포넌트를 수정하도록 하겠습니다.
+
+원래 받아오던 Markdown Query를 지우고 Mdx를 받아오는 Query를 작성할 것 입니다.
+
+`src/pages/blog.tsx`
+```tsx
+import Layout from '@src/components/layout';
+import { BlogAllMarkDownRemark } from '@src/types/graphql';
+
+interface BlogPageProps {
+  data: BlogAllMarkDownRemark;
+}
+
+const BlogPage = ({ data }: BlogPageProps) => {
+  return (
+    <Layout>
+      <h1>Blog Page</h1>
+      <h4>{data.allMarkdownRemark.totalCount} Posts</h4>
+      <section>
+        <article>
+          <ul>
+            {data.allMdx.edges.map(({ node }) => (
+              <li key={node.id}>
+                <Link to={`/${node.slug}`.replace(/\/$/m, '') ?? '/404/'}>
+                  <h3>{node.frontmatter?.title}</h3>
+                  <h4>{node.frontmatter?.date}</h4>
+                  <p>{node.excerpt}</p>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </article>
+      </section>
+    </Layout>
+  );
+};
+
+export const query = graphql`
+  query BlogAllMarkDownRemark {
+    allMdx {
+      edges {
+        node {
+          id
+          frontmatter {
+            title
+            path
+            date(formatString: "MMMM DD, YYYY")
+          }
+          slug
+          excerpt
+        }
+      }
+    }
+  }
+`;
+```
+
+저장을 한 후, 반드시 `npm run apollo:codegen`을 통해 Type을 재생성하시길 바랍니다.
+
+만약 처음 글을 접해서 이것이 무슨 말인지 이해하기 어렵다면 지난 글을 보고 오시길 추천합니다.
+
+또는 타입을 전부 제거하고 자바스크립트로 작성해도 무관합니다.
+
+이제 서버를 재시작하고 열어보도록 하겠습니다.
+
+**만약 서버를 재시작하는데 오류가 발생한다면 지난 글에서 작성한 `gatsby-node.js`를 제거하지 않았으며** 
+
+**`gatsby-config.js`에서 실수를 해서 markdown 파일과 겹쳐 오류가 발생한 것일 수 있습니다.**
+
+실수한 부분이 없는지 확인하시고 [Gatsby Plugin Mdx](https://www.gatsbyjs.com/plugins/gatsby-plugin-mdx/) 또는 [Gatsby Mdx](https://www.gatsbyjs.com/docs/how-to/routing/mdx/)를 참고 하십시오.
+
+이제 :point_right: [http://localhost:8000/blog](http://localhost:8000/blog)로 이동하세요.
+
+자신이 생성한 Mdx 파일로부터 생성된 블로그 포스트 리스트가 보이시나요?
+
+훌륭합니다! :grin:
+
+여기서 잠시,
+
+정확하지는 않지만 우리가 만든 `test-mdx` 라우트와 Link의 path가 일치하지 않아 포스트를 클릭할 시 `Not Found Page`로 이동할 수 있습니다.
+
+만약 그렇다면 `Not Found Page`에서 우리가 만든 `test-mdx`의 경로를 확인하고 그에 맞게 Link를 수정하시면 됩니다.
+
+:point_down:
+
+```
+<Link to={`/${node.slug}`.replace(/\/$/m, '') ?? '/404/'}>
+```
+
+위는 제가 경로를 해결하기 위해 사용한 방법입니다. :cry:
+
+더 좋은 방법을 찾으신다면 누군가 알려주세요!
+
+이제 우리가 만든 `test-mdx` 라우트로 이동해 보겠습니다.
+
+어떤가요?
+
+Markdown으로 Page를 구성했을 때와 별반 차이없도록 결과가 나와야 정상입니다.
