@@ -265,3 +265,112 @@ export const query = graphql`
 어떤가요?
 
 Markdown으로 Page를 구성했을 때와 별반 차이없도록 결과가 나와야 정상입니다.
+
+## Mdx with JavaScript
+
+우리는 Markdown과 똑같이 Mdx를 사용하기 위해 Markdown을 Mdx로 리팩토링한 것이 아닙니다.
+
+이제 Mdx가 Markdown과 무엇이 다른지 비교하기 위해 Mdx밖에 사용할 수 없는 멋진 기능을 사용해볼 구간이 왔습니다.
+
+우리는 크게 2가지를 해볼 것 입니다.
+
+1. 컴포넌트를 Mdx에서 사용해보기
+
+2. Gatsby Server로부터 데이터를 받아와 Mdx에 적용하기
+
+### 컴포넌트를 Mdx에서 사용해보기
+
+가장 먼저 우리가 Mdx에서 사용할 컴포넌트를 하나 생성하도록 하겠습니다.
+
+`src/components/` 디렉토리에 `example.tsx`파일을 하나 생성하세요.
+
+`src/components/example.tsx`
+```tsx
+import React from 'react';
+
+export const Example = () => <span>Example</span>
+```
+
+그리고 최상위 컴포넌트인 `Layout` 컴포넌트에서 `Example` 컴포넌트를 우리가 만든 Mdx 파일에서 사용할 수 있도록
+
+제공하는 작업을 해보도록 하겠습니다.
+
+`src/components/layout.tsx`
+```tsx
+import { MDXProvider } from "@mdx-js/react"
+import { Example } from "./Example"
+
+...
+
+const shortcodes = {Example}
+
+const Layout = () => {
+  return (
+    <MDXProvider components={shortcodes}>
+      ...
+    </MDXProvider>
+  )
+}
+```
+
+`@mdx-js/react`의 MDXProvider Node는 우리가 사용하는 Mdx 내에서 사용할 컴포넌트를 제공하는 역할을 합니다.
+
+이제 우리의 `content/test-mdx.mdx`파일로 돌아와서
+
+```
+---
+title: Test Mdx
+date: 2021-07-07
+---
+
+Mdx를 테스트 중 입니다!
+<Example />
+```
+
+Example을 추가하고 저장한 다음 서버를 재시작 해주세요.
+
+그리고 `http:localhost:8000/test-mdx`로 이동해 볼까요?
+
+:astonished: :astonished: :astonished:
+
+우리가 만든 Example 컴포넌트를 Mdx에서 찾을 수 있습니다!
+
+놀랍습니다. 이것이 가능하다면 우리가 만든 어떤 컴포넌트든지 Mdx에서 사용할 수 있다는 말이 되는데 다른 것도 한번 실험해 봅시다.
+
+아래와 같이 수정해보세요.
+
+:point_down:
+
+`src/components/example.tsx`
+```tsx
+import React from 'react';
+
+interface LayoutProps {
+  children: React.ReactNode;
+}
+
+export const Example = ({children}:LayoutProps) => <span style={{color: 'red'}} >{children}</span>
+```
+
+:heavy_plus_sign:
+
+`content/test-mdx.mdx`
+```
+---
+title: Test Mdx
+date: 2021-07-07
+---
+
+Mdx를 테스트 중 입니다!
+<Example>이 문장은 빨간색으로 예상됩니다.</Example>
+```
+
+그리고 다시 `httpl://localhost:8000/test-mdx`로 이동해보세요.
+
+Example 컴포넌트 내의 텍스트가 빨간색으로 나타나는 것을 확인하셨나요? :heart_eyes:
+
+이제 얼마든지 자신이 원하는 컴포넌트를 Markdown 내에 삽입할 수 있게 된 겁니다. :sunglasses:
+
+축하드립니다! :clap:
+
+하지만 Mdx의 파워는 이것으로 끝이 아닙니다.
