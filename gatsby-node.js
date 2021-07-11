@@ -25,13 +25,13 @@ exports.createPages = async ({ actions, graphql }) => {
               slug
             }
             frontmatter {
-              tags
+              categories
             }
           }
         }
       }
-      tagsGroup: allMdx(limit: 2000) {
-        group(field: frontmatter___tags) {
+      categoriesGroup: allMdx(limit: 2000) {
+        group(field: frontmatter___categories) {
           fieldValue
         }
       }
@@ -50,12 +50,12 @@ exports.createPages = async ({ actions, graphql }) => {
     });
   });
 
-  result.data.tagsGroup.group.forEach((tag) => {
+  result.data.categoriesGroup.group.forEach((category) => {
     createPage({
-      path: `/tags/${_.kebabCase(tag.fieldValue)}`,
-      component: path.resolve(`./src/templates/tag.tsx`),
+      path: `/categories/${_.kebabCase(category.fieldValue)}`,
+      component: path.resolve(`./src/templates/category.tsx`),
       context: {
-        tag: tag.fieldValue,
+        category: category.fieldValue,
       },
     });
   });

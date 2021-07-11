@@ -31,10 +31,10 @@ const BlogPage = ({ data }: BlogPageProps) => {
         <nav>
           <ul>
             {data.allMdx.group.map((category) => (
-              <li key={category.tag}>
+              <li key={category.kind}>
                 <Link
-                  to={`/blog/?category=${category.tag}`}
-                >{`${category.tag} (${category.totalCount})`}</Link>
+                  to={`/blog/?category=${category.kind}`}
+                >{`${category.kind} (${category.totalCount})`}</Link>
               </li>
             ))}
           </ul>
@@ -42,10 +42,14 @@ const BlogPage = ({ data }: BlogPageProps) => {
       </header>
       <section>
         <article>
-          <h4>{data.allMdx.totalCount} Posts</h4>
+          <h4>
+            {data.allMdx.group.find((category) => category.kind === categoryName)?.totalCount} Posts
+          </h4>
           <ul>
             {data.allMdx.edges
-              .filter(({ node }) => node.frontmatter?.tags?.some((tag) => tag === categoryName))
+              .filter(({ node }) =>
+                node.frontmatter?.categories?.some((tag) => tag === categoryName),
+              )
               .map(({ node }) => (
                 <li key={node.id}>
                   <Link to={`${node.fields?.slug}` ?? '/404/'}>
@@ -66,8 +70,8 @@ export const query = graphql`
   query BlogAllMarkDownRemark {
     allMdx {
       totalCount
-      group(field: frontmatter___tags) {
-        tag: fieldValue
+      group(field: frontmatter___categories) {
+        kind: fieldValue
         totalCount
       }
       edges {
@@ -76,7 +80,7 @@ export const query = graphql`
           frontmatter {
             title
             date(formatString: "MMMM DD, YYYY")
-            tags
+            categories
           }
           fields {
             slug

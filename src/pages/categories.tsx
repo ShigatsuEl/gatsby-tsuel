@@ -1,28 +1,28 @@
-import { TagsPageQuery } from '@src/types/graphql';
+import { CategoriesPageQuery } from '@src/types/graphql';
 import { Link, graphql } from 'gatsby';
 import kebabCase from 'lodash/kebabCase';
 import React from 'react';
 import { Helmet } from 'react-helmet';
 
-interface TagsPageProps {
-  data: TagsPageQuery;
+interface CategoriesPageProps {
+  data: CategoriesPageQuery;
 }
 
-const TagsPage = ({
+const CategoriesPage = ({
   data: {
     allMdx: { group },
     site,
   },
-}: TagsPageProps) => (
+}: CategoriesPageProps) => (
   <div>
     <Helmet title={site?.siteMetadata?.title ?? 'Tags'} />
     <div>
-      <h1>Tags</h1>
+      <h1>Categories</h1>
       <ul>
-        {group.map((tag) => (
-          <li key={tag.fieldValue}>
-            <Link to={`/tags/${kebabCase(tag.fieldValue!)}/`}>
-              {tag.fieldValue} ({tag.totalCount})
+        {group.map((category) => (
+          <li key={category.kind}>
+            <Link to={`/categories/${kebabCase(category.kind!)}`}>
+              {category.kind} ({category.totalCount})
             </Link>
           </li>
         ))}
@@ -31,18 +31,18 @@ const TagsPage = ({
   </div>
 );
 
-export default TagsPage;
+export default CategoriesPage;
 
 export const pageQuery = graphql`
-  query TagsPageQuery {
+  query CategoriesPageQuery {
     site {
       siteMetadata {
         title
       }
     }
     allMdx(limit: 2000) {
-      group(field: frontmatter___tags) {
-        fieldValue
+      group(field: frontmatter___categories) {
+        kind: fieldValue
         totalCount
       }
     }
