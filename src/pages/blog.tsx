@@ -6,9 +6,11 @@ import { BlogAllMarkDownRemark } from '@src/types/graphql';
 
 interface BlogPageProps {
   data: BlogAllMarkDownRemark;
+  pageContext: any;
 }
 
-const BlogPage = ({ data }: BlogPageProps) => {
+const BlogPage = ({ pageContext, data }: BlogPageProps) => {
+  console.log(pageContext);
   return (
     <Layout>
       <h1>Blog Page</h1>
@@ -36,6 +38,10 @@ export const query = graphql`
   query BlogAllMarkDownRemark {
     allMdx {
       totalCount
+      group(field: frontmatter___tags) {
+        tag: fieldValue
+        totalCount
+      }
       edges {
         node {
           id
