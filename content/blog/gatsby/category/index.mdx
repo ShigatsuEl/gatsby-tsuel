@@ -45,9 +45,7 @@ Gatsby에서는 카테고리별로 블로그 포스팅을 분류할 수 있도�
 
 4. 템플릿 페이지를 렌더링하기 위해 `gatsby-node.js` 파일 수정하기
 
-4. Tags 페이지에 모든 태그 리스트를 보여주기
-
-5. Tag 페이지에 Tag와 관련된 포스팅 리스트 보여주기
+5. Tags 페이지에 모든 태그 리스트를 보여주기
 
 ### Markdown 또는 Mdx 파일에 `tags` 추가하기
 
@@ -298,9 +296,9 @@ result.data.categoriesGroup.group.forEach((category) => {
 
 우리는 지금까지 총 `all`, `gatsby` 2개의 카테고리를 생성했기 때문에 Not Found 페이지에서 확인할 수 있는 경로는 아래와 같습니다.
 
-1. `/categories/all/`
+1. `/categories/all`
 
-2. `/categories/gatsby/`
+2. `/categories/gatsby`
 
 어느 곳이든 클릭하여 이동해보도록 합시다. 저는 `/categories/gatsby/`로 이동해보도록 하겠습니다.
 
@@ -317,3 +315,102 @@ result.data.categoriesGroup.group.forEach((category) => {
 조금 아쉬운 점은 카테고리를 보고 싶을 때마다 현재로서는 `http://localhost:8000/categories/...`를 직접 치고 이동해야 한다는 점 입니다.
 
 따라서 카테고리를 모두 모아둔 카테고리 리스트 페이지를 하나 생성해보록 하겠습니다.
+
+### Tags 페이지에 모든 태그 리스트를 보여주기
+
+카테고리 리스트를 보여줄 페이지 `categories.tsx`를 생성하도록 하겠습니다.
+
+1. categories.tsx 생성
+
+  `src/templates/categories.tsx`
+  ```tsx
+  import { Link, graphql, } from 'gatsby';
+  import kebabCase from 'lodash/kebabCase';
+  import React from 'react';
+  import { Helmet } from 'react-helmet';
+
+  const CategoriesPage = ({
+    data: {
+      allMdx: { group },
+      site,
+    },
+  }) => (
+    <div>
+      <Helmet title={site?.siteMetadata?.title ?? 'Tags'} />
+      <div>
+        <h1>Categories</h1>
+        <ul>
+          {group.map((category) => (
+            <li key={category.kind}>
+              <Link to={`/categories/${kebabCase(category.kind!)}`}>
+                {category.kind} ({category.totalCount})
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+
+  export default CategoriesPage;
+
+  export const pageQuery = graphql`
+    query CategoriesPageQuery {
+      site {
+        siteMetadata {
+          title
+        }
+      }
+      allMdx(limit: 2000) {
+        group(field: frontmatter___categories) {
+          kind: fieldValue
+          totalCount
+        }
+      }
+    }
+  `;
+  ```
+
+  일단 저장을 하시길 바랍니다.
+
+  이 상태로 저장을 하게되면 분명히 에러가 생기겠지만 이는 Type 생성을 하기 위함입니다.
+
+2. Type 생성
+
+  `npm run apollo:codegen` 명령어를 사용해 Type을 생성하세요.
+
+3. Interface 적용
+
+  ```tsx
+  import { CategoriesPageQuery } from '@src/types/graphql';
+
+  interface CategoriesPageProps {
+    data: CategoriesPageQuery;
+  }
+  ```
+
+  Categories 컴포넌트에 인터페이스를 적용하도록 합니다.
+
+  적용 후 서버가 정상적으로 작동하고 있는지 확인한 후 Gatsby Server로 돌아가 봅시다. :blush:
+
+[Not Found](`http://localhost:8000/test`) 페이지에서 우리가 만든 Categories 페이지의 경로가 생성되었는지 확인해봅시다.
+
+`/categories/` 경로가 존재한다면 Categories.tsx로부터 Gatsby가 Categories 페이지 생성을 성공한 것 입니다!
+
+`/categories` 경로로 이동해볼까요?
+
+![Gatsby Category 02](./gatsby-categories-02.PNG 'Gatsby Categories Page')
+
+:heart_eyes: :heart_eyes:
+
+카테고리 리스트 페이지를 생성해냈습니다!
+
+우리는 이제 카테고리 리스트 페이지를 통해 카테고리의 모든 종류를 확인할 수 있으며
+
+해당 카테고리에 관련된 모든 포스팅 글을 찾아볼 수도 있습니다.
+
+원한다면 blog 페이지에서 카테고리 리스트 페이지로 이동할 수 있는 버튼을 네비게이션에 추가해보는 것은 어떨까요? :grin:
+
+어찌 되었든 이것으로써 우리는 Gatsby가 제공해주는 방식으로 Categories를 구현해낸 것 입니다.
+
+다음으로 우리가 해볼 것은 현재까지 구현한 Categories를 Gatsby가 제공하는 방식이 아닌 새로운 방식으로 구현해보도록 하겠습니다.
