@@ -73,3 +73,5 @@ src/types/graphql.d.ts
 
 # Project Memoirs'
 memoirs/
+
+content/**/test*/

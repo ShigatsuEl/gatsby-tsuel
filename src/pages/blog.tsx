@@ -1,20 +1,40 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from '@reach/router';
 import { graphql, Link } from 'gatsby';
 import queryString from 'query-string';
 
 import Layout from '@src/components/layout';
-import { BlogAllMarkDownRemark } from '@src/types/graphql';
-import { useState } from 'react';
+import useFetch from '@src/hooks/useFetch';
+import { BlogPageQuery } from '@src/types/graphql';
 
 interface BlogPageProps {
-  data: BlogAllMarkDownRemark;
-  pageContext: any;
+  data: BlogPageQuery;
 }
 
 const BlogPage = ({ data }: BlogPageProps) => {
+  const allMdx = data.allMdx;
   const [categoryName, setCategoryName] = useState('');
+  const [page, setPage] = useState(1);
+  const { loading, error, posts } = useFetch(allMdx, categoryName, page);
+  const loader = useRef<HTMLDivElement>(null);
   const location = useLocation();
+
+  const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
+    const target = entries[0];
+    if (target.isIntersecting) {
+      setPage((prev) => prev + 1);
+    }
+  }, []);
+
+  useEffect(() => {
+    const option = {
+      root: null,
+      rootMargin: '20px',
+      threshold: 0,
+    };
+    const observer = new IntersectionObserver(handleObserver, option);
+    if (loader.current) observer.observe(loader.current);
+  }, [handleObserver]);
 
   useEffect(() => {
     if (location.search === '') {
@@ -46,20 +66,19 @@ const BlogPage = ({ data }: BlogPageProps) => {
             {data.allMdx.group.find((category) => category.kind === categoryName)?.totalCount} Posts
           </h4>
           <ul>
-            {data.allMdx.edges
-              .filter(({ node }) =>
-                node.frontmatter?.categories?.some((tag) => tag === categoryName),
-              )
-              .map(({ node }) => (
-                <li key={node.id}>
-                  <Link to={`${node.fields?.slug}` ?? '/404/'}>
-                    <h3>{node.frontmatter?.title}</h3>
-                    <h4>{node.frontmatter?.date}</h4>
-                    <p>{node.excerpt}</p>
-                  </Link>
-                </li>
-              ))}
+            {posts.map(({ node }) => (
+              <li key={node.id}>
+                <Link to={`${node.fields?.slug}` ?? '/404/'}>
+                  <h3>{node.frontmatter?.title}</h3>
+                  <h4>{node.frontmatter?.date}</h4>
+                  <p>{node.excerpt}</p>
+                </Link>
+              </li>
+            ))}
           </ul>
+          {loading && <p>Loading...</p>}
+          {error && <p>Error!</p>}
+          <div ref={loader} />
         </article>
       </section>
     </Layout>
@@ -67,8 +86,8 @@ const BlogPage = ({ data }: BlogPageProps) => {
 };
 
 export const query = graphql`
-  query BlogAllMarkDownRemark {
-    allMdx {
+  query BlogPageQuery {
+    allMdx(sort: { fields: [frontmatter___date], order: DESC }) {
       totalCount
       group(field: frontmatter___categories) {
         kind: fieldValue
