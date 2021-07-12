@@ -144,4 +144,230 @@ const BlogPage = ({ data }: BlogPageProps) => {
 
 그리고 카테고리를 클릭하면 해당링크로 이동되는 것을 확인할 수도 있습니다.
 
-현재까지는 카테고리를 클릭해도 아무런 변화가 없겠지만 차차 클릭 후에 기능을 추가할 것 입니다.
+현재까지는 카테고리를 클릭해도 아무런 변화가 없겠지만 차차 기능을 추가할 것 입니다.
+
+### 카테고리 필터링 기능 추가하기
+
+다음으로 우리가 해볼 것은 대망의 카테고리 필터링 기능입니다.
+
+눈썰미가 좋으신 분들은 벌써 눈치채셨을 수도 있는데 카테고리를 클릭하면 `/blog/?category=${category.kind}` 해당 링크로 이동하는 것을 알 수 있습니다.
+
+왜 이렇게 링크를 설정했을까요?
+
+만약 누군가 `/blog/?category=gatsby`로 이동하게 될 때 category가 `gatsby`인 포스팅 글을 보여주기 위함입니다.
+
+링크에서 category값을 추출하기 위해 우리가 사용할 방법은 `query-string` 패키지를 활용하는 것 입니다.
+
+1. query-string 설치
+
+  ```
+  npm install query-string
+  ```
+
+2. query 추출
+
+  query를 추출하는 방법은 `useLocation` hook을 이용하는 것 입니다.
+
+  `src/pages/blog.tsx`
+  ```tsx
+  const BlogPage = ({ data }: BlogPageProps) => {
+    const [categoryName, setCategoryName] = useState('');
+    const location = useLocation();
+
+    useEffect(() => {
+      if (location.search === '') {
+        setCategoryName('all');
+      } else {
+        setCategoryName(queryString.parse(location.search).category as string);
+      }
+    }, [location]);
+
+    return (
+      ...
+    )
+  }
+  ```
+
+  가장 먼저 categoryName state를 하나 생성합니다.
+
+  categoryName은 Link query로부터 추출된 값을 저장할 값으로 초기값은 빈 문자열을 설정합니다.
+
+  useLocation hook으로부터 search 메서드가 비어있다면 아직 필터링을 적용하지 않은 것으로 간주하고
+
+  `all` 카테고리값을 setState 하도록 하고
+
+  비어있지 않다면 queryString 패키지로부터 Link의 category값을 추출해 setState 하도록 합니다.
+
+3. content 필터링
+
+  이제 카테고리를 클릭할 때 우리는 `categoryName` state로부터 어떤 카테고리의 관련 데이터를 가져와야 할지 알 수 있습니다.
+
+  `src/pages/blog.tsx`
+  ```tsx
+  const BlogPage = ({ data }: BlogPageProps) => {
+    ...
+
+    return (
+      <header>
+        <h1>Blog Page</h1>
+        ...
+      </header>
+      <section>
+        <article>
+          <h4>
+            {data.allMdx.group.find((category) => category.kind === categoryName)?.totalCount} Posts
+          </h4>
+          <ul>
+            {data.allMdx.edges
+              .filter(({ node }) =>
+                node.frontmatter?.categories?.some((tag) => tag === categoryName),
+              )
+              .map(({ node }) => (
+                <li key={node.id}>
+                  <Link to={`${node.fields?.slug}` ?? '/404/'}>
+                    <h3>{node.frontmatter?.title}</h3>
+                    <h4>{node.frontmatter?.date}</h4>
+                    <p>{node.excerpt}</p>
+                  </Link>
+                </li>
+              ))}
+          </ul>
+        </article>
+      </section>
+    )
+  ```
+
+  categoryName과 일치하는 모든 Mdx의 수를 가져오며
+
+  categoryName과 일치하는 모든 Mdx를 리스트로 보여주도록 JSX를 구성합니다.
+
+최종적인 `src/pages/blog.tsx` 구성은 아래와 같습니다.
+
+:point_down:
+
+`src/pages/blog.tsx`
+```tsx
+import React, { useEffect } from 'react';
+import { useLocation } from '@reach/router';
+import { graphql, Link } from 'gatsby';
+import queryString from 'query-string';
+
+import Layout from '@src/components/layout';
+import { BlogAllMarkDownRemark } from '@src/types/graphql';
+import { useState } from 'react';
+
+interface BlogPageProps {
+  data: BlogAllMarkDownRemark;
+  pageContext: any;
+}
+
+const BlogPage = ({ data }: BlogPageProps) => {
+  const [categoryName, setCategoryName] = useState('');
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.search === '') {
+      setCategoryName('all');
+    } else {
+      setCategoryName(queryString.parse(location.search).category as string);
+    }
+  }, [location]);
+
+  return (
+    <Layout>
+      <header>
+        <h1>Blog Page</h1>
+        <nav>
+          <ul>
+            {data.allMdx.group.map((category) => (
+              <li key={category.kind}>
+                <Link
+                  to={`/blog/?category=${category.kind}`}
+                >{`${category.kind} (${category.totalCount})`}</Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </header>
+      <section>
+        <article>
+          <h4>
+            {data.allMdx.group.find((category) => category.kind === categoryName)?.totalCount} Posts
+          </h4>
+          <ul>
+            {data.allMdx.edges
+              .filter(({ node }) =>
+                node.frontmatter?.categories?.some((tag) => tag === categoryName),
+              )
+              .map(({ node }) => (
+                <li key={node.id}>
+                  <Link to={`${node.fields?.slug}` ?? '/404/'}>
+                    <h3>{node.frontmatter?.title}</h3>
+                    <h4>{node.frontmatter?.date}</h4>
+                    <p>{node.excerpt}</p>
+                  </Link>
+                </li>
+              ))}
+          </ul>
+        </article>
+      </section>
+    </Layout>
+  );
+};
+
+export const query = graphql`
+  query BlogAllMarkDownRemark {
+    allMdx {
+      totalCount
+      group(field: frontmatter___categories) {
+        kind: fieldValue
+        totalCount
+      }
+      edges {
+        node {
+          id
+          frontmatter {
+            title
+            date(formatString: "MMMM DD, YYYY")
+            categories
+          }
+          fields {
+            slug
+          }
+          excerpt
+        }
+      }
+    }
+  }
+`;
+
+export default BlogPage;
+```
+
+이제 모든 작업이 끝났습니다! :clap:
+
+모든 것이 제대로 작동하는지 확인하기 위해 서버 상태를 확인하고 [http://localhost:8000/blog](http://localhost:8000/blog 'Blog Page')로 이동하세요.
+
+맨 처음에는 아무런 필터링이 적용되지 않았으므로 **all** 카테고리에 관련된 포스팅 개수와 글들이 보여져야 합니다.
+
+다른 카테고리는 어떤지 확인해 볼까요?
+
+만약 카테고리가 몇개 없거나 확인할만한 글들이 없다면 몇 가지 더 생성해보도록 한 후 테스트해봅시다.
+
+저는 gatsby에 관련된 글을 한개 더 추가해 본 후 gatsby 카테고리를 클릭해보도록 하겠습니다.
+
+여러분이 선택한 category의 글과 포스팅이 바로바로 바뀌는 것을 확인할 수 있나요?
+
+:heart_eyes: :heart_eyes:
+
+축하합니다. :wink:
+
+우리는 이제 카테고리 별로 페이지를 생성하는 방법도 알고 있으며
+
+카테고리별로 필터링을 해보는 방법도 할 수 있습니다.
+
+무엇을 선택하는지는 여러분의 자유입니다.
+
+하지만 선택에 따른 장점과 단점도 함께 가져가야 한다는 점을 잊지 마세요!
+
+여기까지 다들 수고 하셨습니다~ :) :raised_hands:
