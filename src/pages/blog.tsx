@@ -37,6 +37,10 @@ const BlogPage = ({ data }: BlogPageProps) => {
   }, [handleObserver]);
 
   useEffect(() => {
+    setPage(1);
+  }, [categoryName]);
+
+  useEffect(() => {
     if (location.search === '') {
       setCategoryName('all');
     } else {

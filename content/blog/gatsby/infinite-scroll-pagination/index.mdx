@@ -147,7 +147,7 @@ Infinite Scroll을 React에서 구현하는 방법은 크게 3가지가 존재�
   
   만약 4개의 포스트의 높이보다 화면의 높이가 더 길다면 IntersectionObserver API가 실행되지 않을 수 있습니다.
 
-  설명이 난해하다면 일단 계속해서 따라와 주시길 바랍니다.
+  설명이 난해하게 느껴지신다면 일단 계속해서 진행해봅시다.
 
 2. IntersectionObserver 활용하기
 
@@ -169,6 +169,11 @@ Infinite Scroll을 React에서 구현하는 방법은 크게 3가지가 존재�
         setPage((prev) => prev + 1);
       }
     }, []);
+
+    // categoryName이 바뀌면 page의 수도 1로 변경하여 다시 처음부터 로드한다.
+    useEffect(() => {
+      setPage(1);
+    }, [categoryName]);
 
     useEffect(() => {
       const option = {
@@ -210,10 +215,12 @@ Infinite Scroll을 React에서 구현하는 방법은 크게 3가지가 존재�
 
   여기서 useRef()로 등록된 div Element는 화면의 높이보다 아래에 있어야 IntersectionObserver가 작동합니다.
 
-  아까 전에 `slice(0, page * 4)`에서 만약 `slice(0, page * 1)`로 수정하게 된다면
+  예를 들어 아까전에 `slice(0, page * 4)`에서 만약 `slice(0, page * 1)`로 수정하게 된다면
   
   `loader`가 화면의 높이보다 높은 위치에 위치하기 때문에 IntersectionObserver가 작동하지 않을 수 있습니다.
-  
+
+  때문에 여러분이 설계한 프로젝트에 맞게 포스팅 길이를 짜르는 것이 좋습니다.
+
 이로써 useFetch Hook에는 GraphiQL Server로부터 받아온 모든 포스팅과
 
 useLocation Hook으로부터 얻어온 카테고리, 그리고 observer로부터 생성된 page의 수를 입력받아
