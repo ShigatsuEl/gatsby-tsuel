@@ -19,6 +19,14 @@ exports.createPages = async ({ actions, graphql }) => {
     query {
       allMdx(sort: { order: DESC, fields: [frontmatter___date] }, limit: 2000) {
         edges {
+          next {
+            fields {
+              slug
+            }
+            frontmatter {
+              title
+            }
+          }
           node {
             fields {
               slug
@@ -27,19 +35,29 @@ exports.createPages = async ({ actions, graphql }) => {
               categories
             }
           }
+          previous {
+            fields {
+              slug
+            }
+            frontmatter {
+              title
+            }
+          }
         }
       }
     }
   `);
 
-  result.data.allMdx.edges.forEach(({ node }) => {
+  result.data.allMdx.edges.forEach(({ next, node, previous }) => {
     createPage({
       path: node.fields.slug,
       component: path.resolve(`./src/templates/blog-post.tsx`),
       context: {
         // Data passed to context is available
         // in page queries as GraphQL variables.
+        next,
         slug: node.fields.slug,
+        previous,
       },
     });
   });

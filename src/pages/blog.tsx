@@ -64,27 +64,30 @@ const BlogPage = ({ data }: BlogPageProps) => {
           </ul>
         </nav>
       </header>
-      <section>
-        <article>
-          <h4>
-            {data.allMdx.group.find((category) => category.kind === categoryName)?.totalCount} Posts
-          </h4>
-          <ul>
-            {posts.map(({ node }) => (
-              <li key={node.id}>
-                <Link to={`${node.fields?.slug}` ?? '/404/'}>
-                  <h3>{node.frontmatter?.title}</h3>
-                  <h4>{node.frontmatter?.date}</h4>
-                  <p>{node.excerpt}</p>
-                </Link>
-              </li>
-            ))}
-          </ul>
+      <main>
+        <section>
+          <article>
+            <h4>
+              {data.allMdx.group.find((category) => category.kind === categoryName)?.totalCount}{' '}
+              Posts
+            </h4>
+            <ul>
+              {posts.map(({ node }) => (
+                <li key={node.id}>
+                  <Link to={`${node.fields?.slug}` ?? '/404/'}>
+                    <h3>{node.frontmatter?.title}</h3>
+                    <h4>{node.frontmatter?.date}</h4>
+                    <p>{node.excerpt}</p>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </article>
           {loading && <p>Loading...</p>}
           {error && <p>Error!</p>}
           <div ref={loader} />
-        </article>
-      </section>
+        </section>
+      </main>
     </Layout>
   );
 };
