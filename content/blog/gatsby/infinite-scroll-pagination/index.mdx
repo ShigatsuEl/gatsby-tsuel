@@ -50,3 +50,190 @@ Gatsby는 모든 포스팅 글을 불러와 서버에 에러를 발생시키지 
 바로 **Pagination 없이 무한 스크롤을 구현하여 해결**하는 방식으로 한 페이지에서 해결하는 방법입니다.
 
 저는 사용자가 한 페이지에서 모든 것을 할 수 있도록 유도하고 싶기 때문에 바로 이 방법을 사용하려고 합니다.
+
+## Pagination 없이 무한 스크롤을 구현하여 해결
+
+Infinite Scroll을 구현할 수 있다면 사용자가 굳이 다음 페이지 또는 이전 페이지로 이동할 필요가 없습니다.
+
+Infinite Scroll의 원리는 처음 로드했을 때 1번 ~ 10번까지의 글을 보여준 후
+
+글의 가장 밑바닥 부분이 화면의 가장 밑바닥 부분보다 위로 올라가게 된다면 11번 ~ 20번의 글을 더 보여주다가
+
+카테고리의 마지막 글까지 로드하면 Infinite Scroll을 종료하는 것 입니다.
+
+Infinite Scroll을 React에서 구현하는 방법은 크게 3가지가 존재하는 듯 합니다.
+
+1. Scroll Event를 사용하여 구현
+
+2. IntersectionObserver API를 이용하여 구현
+
+3. useRef를 이용하여 구현
+
+이 중에서도 가장 보편적으로 사용되는 방법은 IntersectionObserver API를 이용하여 구현하는 것으로 알려져 있습니다.
+
+따라서 저도 IntersectionObserver API를 이용하여 구현해보독 하겠습니다.
+
+### IntersectionObserver API를 활용하자
+
+1. useFetch Hook 생성
+
+  다른 컴포넌트에서도 사용하지 모르기 때문에 Hook을 하나 생성하도록 하겠습니다.
+
+  `src` 디렉토리에 `hooks` 디렉토리를 생성하고 `useFetch.ts` 파일을 생성하도록 하겠습니다.
+
+  코드는 아래와 같습니다.
+
+  :point_down:
+
+  `src/hooks/useFetch.ts`
+  ```ts
+  import { BlogPageQuery_allMdx, BlogPageQuery_allMdx_edges } from '@src/types/graphql';
+  import { useState, useEffect, useCallback } from 'react';
+
+  interface UseFetchArgs {
+    (posts: BlogPageQuery_allMdx, query: string, page: number): {
+      loading: boolean;
+      error: boolean;
+      posts: BlogPageQuery_allMdx_edges[];
+    };
+  }
+
+  const useFetch: UseFetchArgs = (allMdx, query, page) => {
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
+    const [posts, setPosts] = useState<BlogPageQuery_allMdx_edges[]>([]);
+
+    const sendQuery = useCallback(() => {
+      try {
+        setLoading(true);
+        setError(false);
+        const data = allMdx.edges
+          .filter(({ node }) => node.frontmatter?.categories?.some((category) => category === query))
+          .slice(0, page * 4);
+        setPosts(() => [...data]);
+        setLoading(false);
+      } catch (err) {
+        setError(err);
+      }
+    }, [query, page]);
+
+    useEffect(() => {
+      sendQuery();
+    }, [query, sendQuery, page]);
+
+    return { loading, error, posts };
+  };
+
+  export default useFetch;
+  ```
+
+  useFetch Hook은 총 3가지의 인자를 받습니다.
+
+  allMdx, query, page로 각각 `컨트롤 할 포스팅 리스트`, `컨트롤 할 카테고리`, `컨트롤 할 페이지 수`를 받습니다.
+
+  query와 page를 어떻게 받느냐에 따라 포스팅 개수를 조절할 것이며 page 개수는 IntersectionObserver에 의해 설정될 것 입니다.
+
+  그리고 useFetch Hook은 3가지를 리턴합니다.
+
+  글이 로딩중인지 알려주는 값 `loading`, 에러가 있는지 알려주는 값 `error`, 조절된 포스트들을 내보내는 값 `posts` 입니다.
+
+  또한 useFetch Hook은 인터페이스가 적용되어 있습니다.
+
+  이는 Blog Page 컴포넌트에서 작성된 Query를 `npm run apollo:codegen`을 통해 얻어진 Type으로 위와 같이 설정하도록 합니다.
+
+  마지막으로 주의해야 할 점은 useFetch Hook에서 받아오는 post를 몇개 받아오는지 확인해야 합니다.
+
+  저는 `slice(0, page * 4)`로부터 총 4개의 포스트를 첫 화면에 로딩하도록 했는데
+  
+  만약 4개의 포스트의 높이보다 화면의 높이가 더 길다면 IntersectionObserver API가 실행되지 않을 수 있습니다.
+
+  설명이 난해하다면 일단 계속해서 따라와 주시길 바랍니다.
+
+2. IntersectionObserver 활용하기
+
+  이제 Hook을 사용할 컴포넌트로 돌아오도록 하겠습니다.
+
+  `src/pages/blog.tsx`
+  ```tsx
+  const BlogPage = ({ data }: BlogPageProps) => {
+    const [categoryName, setCategoryName] = useState('');
+    const location = useLocation();
+    const allMdx = data.allMdx;
+    const [page, setPage] = useState(1);
+    const { loading, error, posts } = useFetch(allMdx, categoryName, page);
+    const loader = useRef<HTMLDivElement>(null);
+
+    const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
+      const target = entries[0];
+      if (target.isIntersecting) {
+        setPage((prev) => prev + 1);
+      }
+    }, []);
+
+    useEffect(() => {
+      const option = {
+        root: null,
+        rootMargin: '20px',
+        threshold: 0,
+      };
+      const observer = new IntersectionObserver(handleObserver, option);
+      if (loader.current) observer.observe(loader.current);
+    }, [handleObserver]);
+
+    ...
+
+    return (
+      ...
+      <article>
+        ...
+        <ul>
+          {posts.map(({ node }) => (
+            <li key={node.id}>
+              <Link to={`${node.fields?.slug}` ?? '/404/'}>
+                <h3>{node.frontmatter?.title}</h3>
+                <h4>{node.frontmatter?.date}</h4>
+                <p>{node.excerpt}</p>
+              </Link>
+            </li>
+          ))}
+        </ul>
+        {loading && <p>Loading...</p>}
+        {error && <p>Error!</p>}
+        <div ref={loader} />
+      </article>
+    )
+  ```
+
+  **IntersectionObserver** API는 useRef()로부터 생성한 `loader` 엘리먼트가 화면의 바닥을 지나치는지 계속해서 주시할 것 입니다.
+
+  만약 loader 엘리먼트가 지나치게 되면 우리는 page 값을 증가시킬 것이고 이는 `handleObserver` 함수에 구현되어 있습니다.
+
+  여기서 useRef()로 등록된 div Element는 화면의 높이보다 아래에 있어야 IntersectionObserver가 작동합니다.
+
+  아까 전에 `slice(0, page * 4)`에서 만약 `slice(0, page * 1)`로 수정하게 된다면
+  
+  `loader`가 화면의 높이보다 높은 위치에 위치하기 때문에 IntersectionObserver가 작동하지 않을 수 있습니다.
+  
+이로써 useFetch Hook에는 GraphiQL Server로부터 받아온 모든 포스팅과
+
+useLocation Hook으로부터 얻어온 카테고리, 그리고 observer로부터 생성된 page의 수를 입력받아
+
+loading, error, posts를 가져와 사용할 수 있게 되었습니다.
+
+이제 테스트를 해보도록 하겠습니다.
+
+현재는 포스팅 개수가 적어 테스트할 수 없으니 테스르를 위해 글을 10개정도만 더미로 생성해보겠습니다.
+
+:point_down:
+
+스크롤이 끝까지 도달했을 때 변화하는 길이를 주목하세요!
+
+![Infinite Scroll Pagination 01](./gatsby-infinite-scroll-pagination.gif 'Infinite Scroll Pagination')
+
+:astonished:
+
+보이시나요? 스크롤이 끝까지 도달했을 때 새로운 포스팅 글을 가져올 수 있게 되었습니다. :sunglasses:
+
+이제 우리는 모든 포스팅 글을 한번에 사용자에게 제공하는 것이 아니라
+
+더 필요하면 스크롤링을 통해 새로운 포스팅들을 로드해올 수 있게 되었습니다. :blush:
