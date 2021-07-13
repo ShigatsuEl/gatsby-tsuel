@@ -1,0 +1,30 @@
+---
+title: Gatsby에서 Comment 기능 구현하기
+date: 2021-07-13
+slug: /blog/gatsby/comments
+categories: ['all','gatsby']
+---
+
+Gatsby는 블로그 내에서 댓글 달기 기능을 제공하고 있습니다 :)
+
+:point_down:
+
+[Gatsby Adding Commnet](https://www.gatsbyjs.com/docs/how-to/adding-common-features/adding-comments/)를 확인해보시면 지원되는 플랫폼이 무려 6가지나 있습니다.
+
+가장 추천하고 있는 것은 **Disqus**인 듯 하나 자신의 마음에 드시는 것을 하나 선택하세요.
+
+제가 추천드리고 싶은 것은 **Utterances** 입니다.
+
+Utterances는 깃허브와 연동이 되어 있기 때문에 깃허브 계정만 있다면 누구나 사용할 수 있습니다.
+
+또한 댓글 알림 기능이 있으며 SEO(검색엔진최적화)를 유리하게 적용시킬 수 있다고 알려져 있기 때문에
+
+기능적인 부분에서 많은 이득을 취할 수 있습니다.
+
+또한 UI가 굉장히 심플하기 때문에 사용적인 측면에서 훌륭한 경험을 제공할 것 입니다.
+
+Utterances는 Github 이슈 검색 API를 사용하여 `url`, `pathname` 또는 `title`을 기준으로 페이지와 관련된 issue를 찾으므로
+
+만약 issue를 찾을 수 없다면 Utterances가 자동으로 issue를 생성할 것 입니다.
+
+어떻게 생성되는지 보기 위해 빌드를 시작해보도록 합시다. :blush:
