@@ -4,6 +4,7 @@ import { graphql, Link } from 'gatsby';
 
 import Layout from '@src/components/layout';
 import { BlogPostQuery, BlogPostQuery_sitePage_context } from '@src/types/graphql';
+import Utterances from '@src/components/utterances';
 
 interface BlogPostProps {
   data: BlogPostQuery;
@@ -53,6 +54,9 @@ const BlogPost = ({ data: { mdx }, pageContext }: BlogPostProps) => {
           </nav>
         </section>
       </main>
+      <footer>
+        <Utterances repo="ShigatsuEl/gatsby-tsuel" theme="github-light" />
+      </footer>
     </Layout>
   );
 };
