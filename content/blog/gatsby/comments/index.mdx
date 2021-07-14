@@ -68,3 +68,131 @@ Utterances를 빌드하는 것은 어렵지 않습니다.
   최종적으로 우리가 설정한 값에 대한 스크립트입니다.
 
   Utterances를 우리의 프로젝트 앱에서 사용하기 위해서는 스크립트를 복사해서 붙여 넣으면 완성됩니다.
+
+## Utterances 빌드
+
+우리는 Gatsby에서 React + TypeScript를 사용하고 있으므로 다음과 같이 코드를 작성하도록 합시다.
+
+1. Utterances Compoennt 생성
+
+  `src/compoennts` 디렉토리에 `utterances.tsx` 컴포넌트 생성
+
+  `src/components/utterances.tsx`
+  ```tsx
+  import React, { createRef, useLayoutEffect } from 'react';
+
+  const src = 'https://utteranc.es/client.js';
+
+  export interface IUtterancesProps {
+    repo: string;
+    theme: string;
+  }
+
+  const Utterances: React.FC<IUtterancesProps> = React.memo(({ repo, theme }) => {
+    const containerRef = createRef<HTMLDivElement>();
+
+    useLayoutEffect(() => {
+      const utterances = document.createElement('script');
+      const attributes = {
+        src,
+        repo,
+        theme,
+        'issue-term': 'pathname',
+        label: '✨💬 comments ✨',
+        crossOrigin: 'anonymous',
+        async: 'true',
+      };
+
+      Object.entries(attributes).forEach(([key, value]) => {
+        utterances.setAttribute(key, value);
+      });
+
+      containerRef.current!.appendChild(utterances);
+    }, [repo]);
+
+    return <div ref={containerRef} />;
+  });
+
+  Utterances.displayName = 'Utterances';
+
+  export default Utterances;
+  ```
+
+  :point_up:
+
+  이는 자바스크립트에서 이렇게 작성한 것과 똑같습니다.
+
+  ```js
+  <script src="https://utteranc.es/client.js"
+          repo="ShigatsuEl/gatsby-tsuel"
+          issue-term="pathname"
+          label="comments"
+          theme="github-light"
+          crossorigin="anonymous"
+          async>
+  </script>
+  ```
+
+2. Utterances 컴포넌트 사용
+
+  Utterances를 사용할 장소 `src/templates/blog-post.tsx`에서 import 해보도록 하겠습니다.
+
+  Utterances 컴포넌트에 필요한 props는 `repo`와 `theme` 2개 입니다.
+
+  `src/templates/blog-post.tsx`
+  ```tsx
+  const BlogPost = () => {
+    ...
+    return (
+      ...
+      <footer>
+        <Utterances repo="ShigatsuEl/gatsby-tsuel" theme="github-light" />
+      </footer>
+      ...
+    )
+  }
+  ```
+
+  맨 아랫부분에 컴포넌트를 삽입하였습니다.
+
+  이제 서버를 가동하고 자신의 블로그 포스팅 글로 이동해보세요 :wink:
+
+![Uterrances Result](./gatsby-comments-05.PNG 'Uterrances Result')
+
+Utterances API를 가져오는데 성공했습니다! :satisfied:
+
+이제 여러분이 댓글을 달아볼 차례입니다.
+
+Utterances를 사용하기 위해 깃허브와 연동시키고 댓글을 달아보세요~
+
+![Uterrances Comment](./gatsby-comments-06.PNG 'Uterrances Comment')
+
+댓글을 남기는 것을 성공했습니다. :clap:
+
+이 댓글은 어떻게 생기는 것 일까요?
+
+따로 데이터베이스를 둔 것도 아닌데 말입니다.
+
+확인을 위해서는 우리가 위에서 Utterances Configuration을 하면서 설정한 `repo`(Repository)로 이동해봅시다.
+
+http://github.com/your-name/your-repo/로 이동하면 무엇이 보이시나요?
+
+![Uterrances Github Issue](./gatsby-comments-07.PNG 'Uterrances Github Issue')
+
+이슈가 하나 생성된 것을 알 수 있습니다.
+
+마지막으로 이슈 내용을 보기 위해 클릭하세요.
+
+:point_down:
+
+![Uterrances Github Issue Content](./gatsby-comments-08.PNG 'Uterrances Github Issue Content')
+
+`http://localhost:8000/blog/gatsby/previous-next`에서 댓글을 작성했기 때문에 pathname에 따라
+
+`blog/gatsby/previous-next`라는 제목으로 이슈가 생성된 것을 확인할 수 있습니다.
+
+Utterances를 사용하면 이런 식으로 깃허브 이슈를 통해 댓글을 생성할 수 있는 방법을 사용할 수 있게 된 것 입니다.
+
+어떠셨나요? :blush:
+
+제가 소개한 Utterances가 마음에 드셨으면 좋겠습니다 :)
