@@ -4,3 +4,118 @@ date: 2021-07-14
 slug: /blog/gatsby/mdx/highlight-code-block
 categories: ['all', 'gatsby']
 ---
+
+Gatsby Plugin Mdx를 추가한 바로 직후의 상황이라면 우리가 작성한 Mdx의 콘텐츠가 비어 보이는 느낌을 줄 수 있습니다.
+
+그 원인 중 가장 큰 요인은 우리가 작성한 Mdx에 어떠한 스타일도 주지 못했기 때문입니다.
+
+이번 글에서는 먼저 Mdx에서 작성하는 코드 블럭을 스타일링 할 것이며 추후에 글꼴과 태그에 대해서도 스타일을 줄 것 입니다.
+
+## Gatsby Plugin Prismjs
+
+![Before Highlight Code](./gatsby-mdx-highlight-code-01.PNG 'Before Highlight Code')
+
+:point_up:
+
+이것은 현재 우리가 Mdx 파일 내에서 코드블럭문 ` ``` `으로 작성한 아웃풋 입니다.
+
+이렇게 봐서는 무엇이 글에 해당하며 코드 블럭인지 구분하기 어렵습니다.
+
+따라서 우리는 코드 블럭문을 알기 쉽게 바꿔주는 작업이 필요합니다.
+
+1. 플러그인 설치
+
+  코드 블럭을 하이라이팅 효과를 주기 위해서는 관련 플러그인 설치가 필요합니다.
+
+  :point_down:
+
+  ```shell{outputLines: 1}
+  npm install gatsby-remark-prismjs prismjs
+  ```
+
+  그리고 Mdx를 사용한다면
+
+  :point_down:
+
+  ```shell{outputLines: 1}
+  npm install gatsby-plugin-mdx
+  ```
+
+  Markdown을 사용한다면
+
+  :point_down:
+
+  ```shell{outputLines: 1}
+  npm install gatsby-transformer-remark
+  ```
+
+  자신의 상황에 맞게 플러그인을 설치해주세요. :blush:
+
+2. gatsby-config.js 수정
+
+  기본 설정을 원한다면 다음과 같이 수정하세요.
+
+  Markdown 사용 유저
+
+  :point_down:
+
+  `gatsby-config.js`
+  ```js
+  module.exports = {
+    ...
+    plugins: [
+      ...
+      {
+        resolve: `gatsby-transformer-remark`,
+        gatsbyRemarkPlugins: [
+          ...
+          `gatsby-remark-prismjs`
+        ]
+      }
+    ]
+  }
+  ```
+
+  or
+
+  Mdx 사용 유저
+
+  `gatsby-config.js`
+  ```js
+  module.exports = {
+    ...
+    plugins: [
+      ...
+      {
+        resolve: `gatsby-plugin-mdx`,
+        gatsbyRemarkPlugins: [
+          ...
+          `gatsby-remark-prismjs`
+        ]
+      }
+    ]
+  }
+  ```
+
+3. Prismjs 테마 선택
+
+  Gatsbt에서 제공하는 Prismjs 테마에는 [이곳](https://github.com/PrismJS/prism/tree/1d5047df37aacc900f8270b1c6215028f6988eb1/themes)에 있습니다.
+
+  자신이 원하는 테마를 한가지 고른다음 **gatsby-browser.js** 파일을 생성해 추가해 줄 것 입니다.
+
+  개인적으로 **tomorrow** 테마가 가장 무난하고 심플한 느낌을 주는 것 같습니다.
+
+  `gatsby-browser.js`
+  ```js
+  require('prismjs/themes/prism-tomorrow.css');
+  ```
+
+  이제 저장을 했는지 확인한 후 서버를 재시작하고 [http://localhost:8000](/ 'Gatsby Server')으로 이동하세요.
+
+  자신의 블로그 포스팅 글 중 코드 블럭이 작성되어 있는 곳으로 이동해보세요.
+
+  ![After Highlight Code](./gatsby-mdx-highlight-code-02.PNG 'After Highlight Code')
+
+  :dizzy_face:
+
+  이제 뭔가 코드 블럭이라는 느낌이 나는 것 같네요 :)
