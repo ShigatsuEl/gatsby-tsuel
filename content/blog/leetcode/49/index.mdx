@@ -1,0 +1,61 @@
+---
+title: Group Anagrams(그룹 애너그램)
+date: 2021-07-16
+slug: /blog/leetcode/819
+categories: ['all', 'leetcode']
+tags: ['Python','String']
+---
+
+문자열을 재배열했을 때 다른 뜻을 가진 단어를 한 그룹으로 매핑하세요.
+
+`Example 1:`
+```
+Input: strs = ["eat","tea","tan","ate","nat","bat"]
+Output: [["bat"],["nat","tan"],["ate","eat","tea"]]
+```
+
+`Example 2:`
+```
+Input: strs = [""]
+Output: [[""]]
+```
+
+`Example 3:`
+```
+Input: strs = ["a"]
+Output: [["a"]]
+```
+
+`Constraints:`
+```
+1 <= strs.length <= 104
+0 <= strs[i].length <= 100
+strs[i] consists of lower-case English letters.
+```
+
+## 알고리즘 설계
+
+1. 그룹 애너그램의 핵심은 문자열을 정렬했을 때 다른 뜻을 가진 단어들을 다시 정렬하게 되면 똑같은 값을 가지게 된다는 것입니다.
+
+2. 결과값을 새로운 리스트에 반영하기 위해 빈 리스트를 값으로 가지는 딕셔너리를 생성합니다.
+
+3. 문자열을 정렬했을 때 똑같은 값을 가지는 문자열들을 딕셔너리 값으로 반영합니다.
+
+4. 딕셔너리의 values() 메서드를 통해 리스트들만 출력할 수 있도록 합니다.
+
+## 작성한 코드
+
+```python{numberLines: true}
+import collections
+from typing import List
+
+
+class Solution:
+    def groupAnagrams(self, strs: List[str]) -> List[List[str]]:
+        anagrams = collections.defaultdict(list)
+        
+        for str in strs:
+            anagrams[''.join(sorted(str))].append(str)
+        return list(anagrams.values())
+```
+
