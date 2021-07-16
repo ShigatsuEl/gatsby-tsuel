@@ -1,0 +1,101 @@
+---
+title: Two Sum(두 수의 합합)
+date: 2021-07-16
+slug: /blog/leetcode/1
+categories: ['all', 'leetcode']
+tags: ['Python','Array', 'Data-Structure']
+---
+
+배열 nums와 숫자 target이 입력으로 주어졌을 때, 두 수를 더해 target을 만들 수 있는 배열의 두 숫자 인덱스를 리턴하세요.
+
+`Example 1:`
+```
+Input: nums = [2,7,11,15], target = 9
+Output: [0,1]
+Output: Because nums[0] + nums[1] == 9, we return [0, 1].
+```
+
+`Example 2:`
+```
+Input: nums = [3,2,4], target = 6
+Output: [1,2]
+```
+
+`Example 3:`
+```
+Input: nums = [3,3], target = 6
+Output: [0,1]
+```
+
+`Constraints:`
+```
+2 <= nums.length <= 104
+-109 <= nums[i] <= 109
+-109 <= target <= 109
+Only one valid answer exists.
+```
+
+## 알고리즘 설계
+
+가장 단순하게 생각할 수 있는 방법은 두 수를 더해 타겟이 되는 경우를 모두 확인해보는 것이다. 하지만 이러한 방식으로 접근하게 될 경우 
+시간 복잡도가 O(n^2)이 나오게 되므로 다른 방법을 생각해보도록 합시다.
+
+두 수를 구하는 것이기 때문에 가능한 방법이 있는데 target에서 어떠한 하나의 수를 뺐을 때 그 값이 배열 내에 존재하는지 확인하는 방법이 있습니다.
+
+1. 배열 nums의 순환문에서 인덱스를 순서로 target에서 뺀 값이 nums 안에 존재하는지 확인합니다.
+
+2. 만약 존재한다면 두 수를 더해 target이 되는 쌍을 찾은 것 이므로 해당하는 인덱스 값을 리스트로 반환합니다.
+
+## 작성한 코드
+
+```python{numberLines: true}
+from typing import List
+
+
+class Solution:
+    def twoSum(self, nums: List[int], target: int) -> List[int]:
+        for index, value in enumerate(nums):
+            find_result = target - value
+
+            if find_result in nums[index + 1:]:
+                return [nums.index(value), nums[index + 1:].index(find_result) + index + 1]
+```
+
+## 다른 방법
+
+`Another Answer 1:`
+
+모든 경우의 수를 생각해보는 브루트 포스 방식을 적용한 것것
+
+```python{numberLines: true}
+from typing import List
+
+
+class Solution:
+    def twoSum(self, nums: List[int], target: int) -> List[int]:
+        for i in range(len(nums)):
+            for j in range(i + 1, len(nums)):
+                if nums[i] + nums[j] == target:
+                    return [i, j]
+```
+
+`Another Answer 2:`
+
+맨 처음 작성했던 코드에서 시간 복잡도를 개선한 방법으로 딕셔너리를 이용한 방법입니다.
+
+```python{numberLines: true}
+from typing import List
+
+
+class Solution:
+    def twoSum(self, nums: List[int], target: int) -> List[int]:
+        nums_map = {}
+        # 키와 값을 바꿔서 딕셔너리로 저장
+        for i, num in enumerate(nums):
+            nums_map[num] = i
+
+        # 타겟에서 첫 번째 수를 뺀 결과를 키로 조회
+        for i, num in enumerate(nums):
+            if target - num in nums_map and i != nums_map[target - num]:
+                return [i, nums_map[target - num]]
+```
