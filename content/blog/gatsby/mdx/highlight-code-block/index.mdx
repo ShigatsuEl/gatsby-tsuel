@@ -119,3 +119,144 @@ Gatsby Plugin Mdx를 추가한 바로 직후의 상황이라면 우리가 작성
   :dizzy_face:
 
   이제 뭔가 코드 블럭이라는 느낌이 나는 것 같네요 :)
+
+4. Styling
+
+  여기에 우리만의 커스터마이징을 추가할 수 있는 방법이 있습니다. :blush:
+
+  우선 [Gatsby에 Styled Components 적용하기(with TypeScript)](../styled-components) 글에서 스타일을 적용하셨다면 
+  **./src/styles/global-styled.ts** 파일을 다음과 같이 수정하도록 합니다. 만약 스타일을 다른 곳에서 지정하고 있다면 
+  지정된 장소에서 다음과 같이 스타일을 설정해주시기 바랍니다.
+
+  `src/styles/global-styled.ts`
+  ```ts{numberLines: true}
+  import { createGlobalStyle } from 'styled-components';
+
+  ...
+
+  export const GlobalStyle = createGlobalStyle`
+    ...
+    
+    // highlight-start
+    .gatsby-highlight-code-line {
+      background-color: #022a4b;
+      display: block;
+      margin-right: -1em;
+      margin-left: -1em;
+      padding-right: 1em;
+      padding-left: 0.75em;
+      border-left: 0.25em solid #8b00ff;
+    }
+
+    .gatsby-highlight {
+      background-color: #242323;
+      border-radius: 0.3em;
+      margin: 0.5em 0;
+      padding: 1em;
+      overflow: auto;
+    }
+    // highlight-end
+
+    // highlight-start
+    .gatsby-highlight pre[class*="language-"] {
+      background-color: transparent;
+      margin: 0;
+      padding: 0;
+      overflow: initial;
+      float: left;
+      min-width: 100%;
+    }
+
+    .gatsby-highlight pre[class*="language-"].line-numbers {
+      padding: 0;
+      padding-left: 2.8em;
+      overflow: initial;
+    }
+    // highlight-end
+
+    // highlight-start
+    .command-line-prompt > span:before {
+      color: #999;
+      content: " ";
+      display: block;
+      padding-right: 0.8em;
+    }
+
+    .command-line-prompt > span[data-user]:before {
+      content: "[" attr(data-user) "@" attr(data-host) "] $";
+    }
+
+    .command-line-prompt > span[data-user="root"]:before {
+      content: "[" attr(data-user) "@" attr(data-host) "] #";
+    }
+
+    .command-line-prompt > span[data-prompt]:before {
+      content: attr(data-prompt);
+    }
+
+    .command-line-prompt > span::before {
+      color: #e0e0e0;
+    }
+    // highlight-end
+  ```
+
+  이제 저장을 하고 다시 포스팅 글로 이동해 보세요.
+
+  >달라진 것이 없습니다?
+
+  정상입니다. 아직 하이라이팅 효과를 주는 작업을 하지 않았습니다.
+
+  이제 Mdx 또는 Markdown 파일에서 다음과 같이 룰을 적용해주세요. :blush:
+
+  ![Number Lines](./gatsby-mdx-highlight-code-04.PNG 'Number Lines')
+
+  25번 ~ 37번까지의 스타일링 결과입니다.
+
+  :point_down:
+
+  ![Number Lines Result](./gatsby-mdx-highlight-code-07.PNG 'Number Lines Result')
+
+  또 다른 스타일도 있습니다.
+
+  ![Highlight Next Line](./gatsby-mdx-highlight-code-05.PNG 'Highlight Next Line')
+
+  ![Highlight Start End](./gatsby-mdx-highlight-code-06.PNG 'Highlight Start End')
+
+  8번 ~ 23번까지의 스타일링 결과입니다.
+
+  :point_down:
+
+  ![Highlight Next Line Result](./gatsby-mdx-highlight-code-08.PNG 'Highlight Next Line Result')
+
+  ![Highlight Start End Result](./gatsby-mdx-highlight-code-09.PNG 'Highlight Start End Result')
+
+  마지막으로 쉘 프롬프트 커맨드를 스타일링한 방식도 있습니다.
+
+  ```
+  ```shell{outputLines: 2}
+  npm install gatsby
+  successfully installed!!
+  ...
+  ```
+
+  Result :point_down:
+
+  ```shell{outputLines: 2}
+  npm install gatsby
+  successfully installed!!
+  ```
+
+  prompt User 또는 Host를 변경하고 싶다면 다음과 같이 사용할 수 있습니다.
+
+  ```
+  ```shell{promptUser: alice}{promptHost: dev.localhost}
+  npm install gatsby
+  successfully installed!!
+  ```
+
+  Result :point_down:
+
+  ```shell{promptUser: alice}{promptHost: dev.localhost}{outputLines: 2}
+  npm install gatsby
+  successfully installed!!
+  ```
