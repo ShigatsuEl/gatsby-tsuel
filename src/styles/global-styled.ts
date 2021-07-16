@@ -13,10 +13,6 @@ export const GlobalStyle = createGlobalStyle`
     cursor: pointer;
   }
 
-  ul, ol, li {
-    list-style: none;
-  }
-
 /**
  * Add back the container background-color, border-radius, padding, margin
  * and overflow that we removed from <pre>.

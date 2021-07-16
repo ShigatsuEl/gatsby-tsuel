@@ -49,6 +49,78 @@ tags: ['NestJS', 'TypeScript', 'WebSocket', 'React']
 
 ## 인포메이션 아키텍처
 
+- Logout Router
+
+  - Home
+
+    이메일 & 패스워드를 통한 로그인 인증 구현
+
+    소셜 로그인 추가
+
+  - Sign Up
+
+    이메일 & 성 & 이름 & 비밀번호 & 비밀번호 체크 입력으로 회원가입 구현
+
+    User 모델(eamil, firstName, lastName, password, passwordCheck)
+
+- Login Router
+
+  - Home
+
+    실시간으로 게임 룸 인원 수, 상태, 멤버이름 업데이트 하기
+
+    게임 룸에 인원이 아무도 없을 시, 방 삭제
+
+    게임 룸 리스트 나열해서 보여주기
+
+    Game 모델(title, currentHeadCount, totalHeadCount, status, gamerList: User 모델)
+
+    - Profile
+
+      이메일 & 성 & 이름 & 비밀번호 보여주기
+
+      - Edit Profile
+
+        패스워드 확인 후 성 & 이름 & 비밀번호 변경 가능
+
+  - Game
+
+    게임이 시작되면 인원수에 맞게 랜덤으로 마피아와 시민을 나누기 -> User 모델(+role)
+
+    - 밤
+
+      마피아만 채팅 활성화 & 채팅 볼 수 있음(15초) -> Chat 모델(userName: [User 모델], content, visible)
+
+      마피아 투표 -> Game 모델(+aliveUserList: [User 모델]) / role을 통해 살아남은 시민과 마피아를 aliveUserList에 반영
+
+      클라이언트 측에서 soket.io 필요(단 한명만 지목 가능하게 함)
+
+      시민은 30초간 대기
+
+    - 낮
+
+      실시간 채팅 활성화
+
+      투표 활성화 -> Game 모델(+votedUser: User 모델) / 한명 당 한명만 투표할 수 있음
+
+      낮 종료 시, 가장 많은 투표를 받은 용의자 선정(role 업데이트)
+
+    - 저녁
+
+      용의자 발언(15초) -> 마피아, 시민은 발언권 없음
+
+      실시간 채팅 통제
+
+      모든 게이머 투표 -> Game 모델 aliveUserList 반영
+
+      저녁 종료 시, votedUser 초기화
+
+    마피아 승리 또는 시민 승리 그리고 게임 진행 불가인 경우 게임 결과 발표를 하면서 종료
+
+    방에 인원이 아무도 없으면 Game 데이터 삭제
+
+## 와이어프레임
+
 ![Logout Router](./project-mafia-plan-02.png 'Logout Router')
 
 ![Home](./project-mafia-plan-03.png 'Home')
