@@ -1,0 +1,85 @@
+---
+title: ZigZag Conversion(지그재그 변환)
+date: 2021-07-19
+slug: /blog/leetcode/6
+categories: ['all', 'leetcode']
+tags: ['Python','String', 'Data-Structure']
+---
+
+문자열 "PAYPALISHIRING"가 지그재그 패턴으로 쓰여졌을 때 다음과 같은 행, 열을 가집니다.
+
+```
+P   A   H   N
+A P L S I I G
+Y   I   R
+```
+
+그리고 이것은 "PAHNAPLSIIGYIR"으로 읽을 수 있습니다.
+
+문자열을 통해 지그재그로 변환할 수 있는 코드를 작성하세요.
+
+`Example 1:`
+```
+Input: s = "PAYPALISHIRING", numRows = 3
+Output: "PAHNAPLSIIGYIR"
+```
+
+`Example 2:`
+```
+Input: s = "PAYPALISHIRING", numRows = 4
+Output: "PINALSIGYAHRPI"
+Explanation:
+P     I    N
+A   L S  I G
+Y A   H R
+P     I
+```
+
+`Example 3:`
+```
+Input: s = "A", numRows = 1
+Output: "A"
+```
+
+`Constraints:`
+```
+1 <= s.length <= 1000
+s consists of English letters (lower-case and upper-case), ',' and '.'.
+1 <= numRows <= 1000
+```
+
+## 알고리즘 설계
+
+1. 주어진 행이 1개라면 지그재그를 변환할 필요가 없으므로 그대로 리턴하여 빠르게 함수를 종료합니다.
+
+2. 현재 어느 행에 있는지 확인할 **curRow**와 어느 방향으로 지그재그를 할 것인지 정하는 **step**을 미리 선언합니다.
+
+3. step은 딱 2가지의 경우에서만 바뀌게 됩니다.
+
+  3-1. numRows의 첫번째 경우
+
+  3-2. numRows의 마지막 경우
+
+4. 지그재그 변환을 거친 rows를 문자열로 합치면 끝이다.
+
+## 작성한 코드
+
+```python{numberLines: true}
+class Solution:
+    def convert(self, s, numRows):
+        if numRows == 1:
+          return s
+
+        curRow, step = 0, 1
+        rows = [''] * numRows
+
+        for ch in s:
+          rows[curRow] += ch
+          if curRow == numRows - 1:
+            step = -1
+          elif curRow == 0:
+            step = 1
+          curRow += step
+
+        return ''.join(rows)
+```
