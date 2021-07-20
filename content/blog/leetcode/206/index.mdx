@@ -1,0 +1,57 @@
+---
+title: Reverse Linked List(역순 연결 리스트트)
+date: 2021-07-20
+slug: /blog/leetcode/206
+categories: ['all', 'leetcode']
+tags: ['Python','Linked-List', 'Recursion']
+---
+
+정렬되어 있는 두 연결 리스트를 합치세요.
+
+`Example 1:`
+```
+Input: head = [1,2,3,4,5]
+Output: [5,4,3,2,1]
+```
+
+`Example 2:`
+```
+Input: head = [1,2]
+Output: [2,1]
+```
+
+`Example 3:`
+```
+Input: head = []
+Output: []
+```
+
+`Constraints:`
+```
+The number of nodes in the list is the range [0, 5000].
+-5000 <= Node.val <= 5000
+```
+
+## 알고리즘 설계
+
+1. curr 노드의 next를 prev 노드로 업데이트하면 되지만 업데이트하게 되는 순간 다음 노드가 무엇인지 알 수 없게 된다.
+
+2. 이를 해결하기 위해 prev, curr, next 세개의 포인터를 만들고 역순으로 업데이트 하는 순간마다 포인터를 한칸씩 오른쪽으로 옮기는 것이다.
+
+3. 업데이트 되어도 다음 바꾸어야 할 노드가 무엇인지 알고 있으므로 이제 가능하다.
+
+## 작성한 코드
+
+```python{numberLines: true}
+class Solution:
+    def reverseList(self, head: ListNode) -> ListNode:
+        prev: ListNode = None
+        curr: ListNode = head
+
+        while curr != None:
+            next: ListNode = curr.next
+            curr.next = prev
+            prev = curr
+            curr = next
+        return prev
+```
