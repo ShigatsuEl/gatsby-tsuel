@@ -71,7 +71,7 @@ tags: ['NestJS', 'TypeScript', 'WebSocket', 'React']
 
     게임 룸에 인원이 아무도 없을 시, 방 삭제
 
-    게임 룸 리스트 나열해서 보여주기
+    게임 룸 리스트 나열해서 보여주기(인원 수 정렬)
 
     Game 모델(title, currentHeadCount, totalHeadCount, status, gamerList: User 모델)
 
@@ -85,35 +85,41 @@ tags: ['NestJS', 'TypeScript', 'WebSocket', 'React']
 
   - Game
 
-    게임이 시작되면 인원수에 맞게 랜덤으로 마피아와 시민을 나누기 -> User 모델(+role)
+    게임이 시작되면 인원수에 맞게 랜덤으로 직업(마피아 | 경찰 | 의사 | 시민)을 나누기 -> User 모델(+role)
+
+    역할에 따라 룰을 달리 설명
 
     - 밤
 
-      마피아만 채팅 활성화 & 채팅 볼 수 있음(15초) -> Chat 모델(userName: [User 모델], content, visible)
+      마피아만 채팅 활성화 & 채팅 볼 수 있음(15초) -> Chat 모델(userName: User 모델, content, visible)
 
-      마피아 투표 -> Game 모델(+aliveUserList: [User 모델]) / role을 통해 살아남은 시민과 마피아를 aliveUserList에 반영
+      마피아 투표 -> Game 모델(+aliveUserList: [User 모델]) / 살아남은 시민과 마피아를 aliveUserList에 반영
 
-      클라이언트 측에서 soket.io 필요(단 한명만 지목 가능하게 함)
+      Case 1. 의사가 방어할 경우 -> 마피아로부터 보호
 
-      시민은 30초간 대기
+      Case 2. 경찰이 마피아를 지목한 경우 -> 알림창 설정
 
     - 낮
 
-      실시간 채팅 활성화
+      30초 동안 실시간 채팅 활성화
 
       투표 활성화 -> Game 모델(+votedUser: User 모델) / 한명 당 한명만 투표할 수 있음
 
-      낮 종료 시, 가장 많은 투표를 받은 용의자 선정(role 업데이트)
+      낮 종료 시, 가장 많은 투표를 받은 용의자 선정 -> Game 모델(+suspect: User 모델)
 
     - 저녁
 
       용의자 발언(15초) -> 마피아, 시민은 발언권 없음
 
-      실시간 채팅 통제
+      용의자 발언 중 실시간 채팅 통제 | 발언 종료 후 채팅 10초간 활성화
 
       모든 게이머 투표 -> Game 모델 aliveUserList 반영
 
-      저녁 종료 시, votedUser 초기화
+      Case 1. 마피아일 경우 마지막 마피아인지 확인하고 시민 승리로 게임 종료
+
+      Case 2. 시민일 경우 다시 밤으로 넘어감
+
+      저녁 종료 시, votedUser 초기화 & suspect null 초기화
 
     마피아 승리 또는 시민 승리 그리고 게임 진행 불가인 경우 게임 결과 발표를 하면서 종료
 
@@ -121,10 +127,34 @@ tags: ['NestJS', 'TypeScript', 'WebSocket', 'React']
 
 ## 와이어프레임
 
-![Logout Router](./project-mafia-plan-02.png 'Logout Router')
+- Logout Router
 
-![Home](./project-mafia-plan-03.png 'Home')
+  ![Logout Router](./project-mafia-plan-02.png 'Logout Router')
 
-![Game Room](./project-mafia-plan-04.png 'Game Room')
+  로그아웃 상태에서는 회원가입과 로그인 인증을 구현합니다.
 
-![Game Result](./project-mafia-plan-05.png 'Game Result')
+- Home
+
+  ![Home](./project-mafia-plan-03.png 'Home')
+
+  로그인 상태의 홈 화면은 게임 룸 리스트를 보여주며 Profile 링크를 구현합니다.
+
+  Profile 화면에서는 Edit Profile을 구현합니다.
+
+- Game
+
+  ![Game Room](./project-mafia-plan-04.png 'Game Room')
+
+  밤 | 낮 | 저녁의 패턴으로 이루어지며 각각 상황에 맞는 레이아웃을 구현합니다.
+
+  밤에는 마피아를 위한 셋업, 낮에는 모든 유저의 실시간 채팅, 저녁에는 투표 공간을 마련합니다.
+
+  ![Game Result](./project-mafia-plan-05.png 'Game Result')
+
+  마피아가 먼저 잡히거나 시민이 모두 죽으면 게임이 종료되며 게임이 불가능한 상황에서도 종료할 수 있도록 합니다.
+
+처음에는 6명을 토탈인원을 기준으로 구성하고 시간이 남게되면 4명, 8명까지 추가로 빌드할 생각입니다.
+
+또한 마피아 프로젝트를 빌드하면서 경험한 방법과 재밌었던 부분에 대해서 모두 공유해볼 예정입니다.
+
+시작해보겠습니다 :)
