@@ -1,0 +1,96 @@
+---
+title: Swap Nodes in Pairs(페어의 노드 스왑)
+date: 2021-07-21
+slug: /blog/leetcode/24
+categories: ['all', 'leetcode']
+tags: ['Python','Linked-List', 'Recursion']
+---
+
+연결 리스트가 주어졌을 때 두개의 인접한 노드들끼리 스왑한 연결 리스트를 반환하세요.
+
+`Example 1:`
+```
+Input: head = [1,2,3,4]
+Output: [2,1,4,3]
+```
+
+`Example 2:`
+```
+Input: head = []
+Output: []
+```
+
+`Example 3:`
+```
+Input: head = [1]
+Output: [1]
+```
+
+`Constraints:`
+```
+The number of nodes in the list is in the range [0, 100].
+0 <= Node.val <= 100
+```
+
+## 알고리즘 설계
+
+1. 일차원적으로 생각할 수 있는 방법으로 홀수 노드와 짝수 노드의 **val**값을 변경하는 것입니다.
+
+2. 이 방법은 정답처리가 되지만 이 문제에서는 사용하면 안되는 방식입니다. 이 문제의 진짜 의도는 값을 바꾸는 것이 아닌 
+연결리스트 자체를 바꾸는 것이기 때문이죠.
+
+## 작성한 코드
+
+```python{numberLines: true}
+class Solution:
+    def swapPairs(self, head: ListNode) -> ListNode:
+        curr = head
+        
+        while curr and curr.next:
+            curr.val, curr.next.val = curr.next.val, curr.val
+            curr = curr.next.next
+        return head
+```
+
+## 다른 방법
+
+- 반복 구조로 스왑
+
+  ```python{numberLines: true}
+  class Solution:
+      def swapPairs(self, head: ListNode) -> ListNode:
+          root = prev = ListNode(None)
+          prev.next = head
+          while head and head.next:
+              # b가 a(head)를 가리키도록
+              b = head.next
+              head.next = b.next
+              b.next = head
+
+              # prev가 b를 가리키도록
+              prev.next = b
+
+              # 다음 번 비교를 위해 이동
+              head = head.next
+              prev = prev.next.next
+          return root.next
+  ```
+
+  페어의 값을 변경하는 것이 아닌 연결리스트 자체를 변경하는 방법입니다. `1 -> 2 -> 3 -> 4` 라는 연결리스트를 가정할 때 
+  1과 2의 노드 자리를 변경하고 다음 비교를 위해 head를 3번으로 옮겨줍니다. 순환문을 끝내고나면 `2 -> 1 -> 4 -> 3`이라는 연결리스트 
+  구조를 가지게 되며 이러한 결과값을 반환하기 위해 head를 반환하지 않고 root.next를 반환한 이유는 위 순환문에서 페어의 값을 변경하기 위해 
+  head의 값을 변경하기 되었기 때문에 맨 처음 head값을 가리키는 root.next를 반환하는 것 입니다.
+
+- 재귀 구조로 스왑
+
+  ```python{numberLines: true}
+  class Solution:
+    def swapPairs(self, head: ListNode) -> ListNode:
+        if head and head.next:
+            p = head.next
+            # 스왑된 값 리턴 받음
+            head.next = self.swapPairs(p.next)
+            p.next = head
+            return p
+        return head
+  ```
