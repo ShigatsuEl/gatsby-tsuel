@@ -1,0 +1,88 @@
+---
+title: Implement Stack using Queues(큐를 사용한 스택 구현)
+date: 2021-07-22
+slug: /blog/leetcode/225
+categories: ['all', 'leetcode']
+tags: ['Python','Stack', 'Queue']
+---
+
+큐를 이용해 다음 연산을 지원하는 스택을 구현하세요.
+
+- void **push**(int x) Pushes element x to the top of the stack.
+
+- int **pop**() Removes the element on the top of the stack and returns it.
+
+- int **top**() Returns the element on the top of the stack.
+
+- boolean **empty**() Returns true if the stack is empty, false otherwise.
+
+`Example 1:`
+```
+Input
+["MyStack", "push", "push", "top", "pop", "empty"]
+[[], [1], [2], [], [], []]
+Output
+[null, null, null, 2, 2, false]
+
+Explanation
+MyStack myStack = new MyStack();
+myStack.push(1);
+myStack.push(2);
+myStack.top(); // return 2
+myStack.pop(); // return 2
+myStack.empty(); // return False
+```
+
+`Constraints:`
+```
+1 <= x <= 9
+At most 100 calls will be made to push, pop, top, and empty.
+All the calls to pop and top are valid.
+```
+
+## 알고리즘 설계
+
+1. 조심해야할 부분은 push 연산입니다. 앞에서부터 밀어넣어야하지만 큐에는 앞에서부터 넣는 연산이 없으므로 먼저 큐에 append 메서드로 집어넣고  
+다시 popleft 메서드로 재정렬해주는 것으로 앞에서부터 집어넣을 수 있습니다.
+
+## 작성한 코드
+
+```python{numberLines: true}
+class MyStack:
+
+    def __init__(self):
+        """
+        Initialize your data structure here.
+        """
+        self.queue = collections.deque()
+        
+
+    def push(self, x: int) -> None:
+        """
+        Push element x onto stack.
+        """
+        self.queue.append(x)
+        for _ in range(len(self.queue) - 1):
+            self.queue.append(self.queue.popleft())
+        
+
+    def pop(self) -> int:
+        """
+        Removes the element on top of the stack and returns that element.
+        """
+        return self.queue.popleft()
+        
+
+    def top(self) -> int:
+        """
+        Get the top element.
+        """
+        return self.queue[0]
+        
+
+    def empty(self) -> bool:
+        """
+        Returns whether the stack is empty.
+        """
+        return len(self.queue) == 0
+```
