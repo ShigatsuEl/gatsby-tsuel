@@ -1,0 +1,94 @@
+---
+title: Implement Queue using Stacks(스택을 사용한 큐 구현)
+date: 2021-07-22
+slug: /blog/leetcode/232
+categories: ['all', 'leetcode']
+tags: ['Python','Stack', 'Queue']
+---
+
+스택을 사용해 선입선출(FIFO)인 큐를 구현하세요.
+
+- void **push**(int x) Pushes element x to the back of the queue.
+
+- int **pop**() Removes the element from the front of the queue and returns it.
+
+- int **peek**() Returns the element at the front of the queue.
+
+- boolean **empty**() Returns true if the queue is empty, false otherwise.
+
+
+`Example 1:`
+```
+Input
+["MyQueue", "push", "push", "peek", "pop", "empty"]
+[[], [1], [2], [], [], []]
+Output
+[null, null, null, 1, 1, false]
+
+Explanation
+MyQueue myQueue = new MyQueue();
+myQueue.push(1); // queue is: [1]
+myQueue.push(2); // queue is: [1, 2] (leftmost is front of the queue)
+myQueue.peek(); // return 1
+myQueue.pop(); // return 1, queue is [2]
+myQueue.empty(); // return false
+```
+
+`Constraints:`
+```
+1 <= x <= 9
+At most 100 calls will be made to push, pop, peek, and empty.
+All the calls to pop and peek are valid.
+```
+
+## 알고리즘 설계
+
+1. 한쪽으로만 입력과 출력이 이루어지는 스택으로 큐를 구현하기는 어려우니 스택을 2개 사용하도록 합니다.(input + output)
+
+2. 입력은 input 스택에 집어넣고 출력은 input 스택에 있는 것을 output 스택으로 옮겨 하나씩 제거하도록 합니다.
+
+## 작성한 코드
+
+```python{numberLines: true}
+class MyQueue:
+
+    def __init__(self):
+        """
+        Initialize your data structure here.
+        """
+        self.input = []
+        self.output = []
+        
+
+    def push(self, x: int) -> None:
+        """
+        Push element x to the back of queue.
+        """
+        self.input.append(x)
+        
+
+    def pop(self) -> int:
+        """
+        Removes the element from in front of queue and returns that element.
+        """
+        self.peek()
+        return self.output.pop()
+        
+
+    # highlight-start
+    def peek(self) -> int:
+        """
+        Get the front element.
+        """
+        if not self.output:
+            while self.input:
+                self.output.append(self.input.pop())
+        return self.output[-1]
+    # highlight-end
+
+    def empty(self) -> bool:
+        """
+        Returns whether the queue is empty.
+        """
+        return len(self.input) == 0 and len(self.output) == 0
+```
