@@ -1,0 +1,75 @@
+---
+title: Valid Parentheses(유효한 괄호)
+date: 2021-07-22
+slug: /blog/leetcode/20
+categories: ['all', 'leetcode']
+tags: ['Python','Stack', 'String']
+---
+
+입력 값이 괄호 쌍으로 이루어져 있는지 확인하세요.
+
+단, 열린 괄호는 똑같은 쌍의 괄호로 닫혀야 합니다.
+
+`Example 1:`
+```
+Input: s = "()"
+Output: true
+```
+
+`Example 2:`
+```
+Input: s = "()[]{}"
+Output: true
+```
+
+`Example 3:`
+```
+Input: s = "(]"
+Output: false
+```
+
+`Example 4:`
+```
+Input: s = "([)]"
+Output: false
+```
+
+`Example 5:`
+```
+Input: s = "{[]}"
+Output: true
+```
+
+`Constraints:`
+```
+1 <= s.length <= 104
+s consists of parentheses only '()[]{}'.
+```
+
+## 알고리즘 설계
+
+1. 괄호의 쌍을 table dict으로 구성합니다.
+
+2. 만약 문자가 닫힌 괄호 중 하나라면 스택의 마지막 인덱스가 table의 쌍과 맞는지 확인하고 그 외는 전부 스택에 푸시한다.
+
+3. 최종적으로 괄호가 쌍으로 존재한다면 스택은 전부 제거되어 길이가 0이 되어있음을 의미합니다.
+
+## 작성한 코드
+
+```python{numberLines: true}
+class Solution:
+    def isValid(self, s: str) -> bool:
+        stack = []
+        table = {
+            ')': '(',
+            '}': '{',
+            ']': '[',
+        }
+                
+        for char in s:
+            if char not in table:
+                stack.append(char)
+            elif not stack or table[char] != stack.pop():
+                return False
+        return len(stack) == 0
+```
