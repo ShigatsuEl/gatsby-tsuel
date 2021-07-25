@@ -8,3 +8,41 @@ tags: ['NestJS', 'TypeScript', 'TypeORM', 'MySQL']
 
 마피아 게임을 만들기 앞서 가장 필요한 것은 역시 데이터베이스를 연동하는 것 입니다. 
 따라서 이번 글에서는 NestJS에서 어떻게 Database를 연동할 것인지 알아볼 것이며, 또한 프로젝트 빌드를 위해 필요한 갖가지 설정들도 다뤄볼 예정입니다.
+
+## NestJS Project Start
+
+가장 먼저 `@nest/cli` 패키지가 글로벌하게 설치가 되어 있는지 확인할 필요가 있습니다.
+
+```shell{outputLines: 2-4}
+npm list -g
+C:\Users\User\AppData\Roaming\npm
+├── ...
+├── @nestjs/cli@7.6.0
+```
+
+설치가 되어 있지 않다면 다음 명령어로 글로벌하게 설치하도록 합시다.
+
+```shell
+npm install -g @nest/cli
+```
+
+설치를 마친 후 이제 우리는 NestJS 프로젝트를 생성하도록 합시다.
+
+```shell
+cd 자신이 프로젝트를 빌드하길 원하는 경로로 이동
+nest new [프로젝트 이름]
+```
+
+nest은(는) 내부 또는 외부 명령 실행할 수 있는 프로그램 또는 배치 파일이 아닙니다. 
+라는 메시지가 명령 프롬프트에 출력된다면 @nest/cli가 제대로 설치되어 있는지 확인하시길 바랍니다.
+
+프로젝트 생성에 성공하면 에디터에서 프로젝트를 실행해보도록 할까요?
+
+```shell
+// npm으로 프로젝트 실행
+npm run start:dev
+// yarn으로 프로젝트 실행
+yarn run start:dev
+```
+
+[서버](http://localhost:3000 'NestJS Server')로 이동하여 `Hello World!` 문구를 발견하셨다면 성공적으로 NestJS를 실행시킨 것 입니다.
