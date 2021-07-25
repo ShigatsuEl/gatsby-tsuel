@@ -261,9 +261,120 @@ TypeScript 기반인 NestJS에서 MySQL을 그대로 사용하기엔 아까워 T
   export class AppModule {}
   ```
 
-  위에 'dummy-password'는 여러분이 설정한 패스워드를 입력하시면 됩니다. 
+  'password'는 여러분이 설정한 패스워드를 입력하시면 됩니다. 
   당연한 이야기지만 database를 연결하는 패스워드는 절대 노출시키면 안되기 때문에 추후에 환경변수를 통해 숨겨주도록 할 것 입니다. 
   
   저장을 하고 서버를 재실행해보세요. 
   혹시 `rxjs_1.lastValueFrom is not a function` 오류가 발생했다면 rxjs 패키지의 버전을 7이상으로 재설치 하시길 바랍니다. 
   서버를 실행했을 때 아무런 에러가 발생하지 않아야 데이터베이스와 성공적으로 연결한 것 입니다. :sunglasses:
+
+## NestJS Configuration and Schema Validation
+
+데이터베이스 연결에는 성공했지만 마지막으로 해주어야 할 부분이 남아 있습니다. 
+각기 다른 환경에 따른 변수와 그것을 검증하는 것 입니다. 
+
+1. 패키지 설치
+
+  ```shell{outputLines: 2}
+  npm install @nestjs/config // npm 설치
+  or
+  yarn add @nestjs/config // yarn 설치
+  ```
+
+2. app.module.ts 수정
+
+  `app.module.ts`
+  ```ts
+  import { Module } from '@nestjs/common';
+  // highlight-next-line
+  import { ConfigModule } from '@nestjs/config';
+  import { TypeOrmModule } from '@nestjs/typeorm';
+  // highlight-next-line
+  import * as Joi from 'joi';
+
+  @Module({
+    imports: [
+      // highlight-start
+      ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: process.env.NODE_ENV === 'development' ? '.env.development' : '.env.test',
+      ignoreEnvFile: process.env.NODE_ENV === 'production',
+      validationSchema: Joi.object({
+        NODE_ENV: Joi.string().valid('development', 'production', 'test').required(),
+        DB_HOST: Joi.string(),
+        DB_PORT: Joi.string(),
+        DB_USERNAME: Joi.string(),
+        DB_PASSWORD: Joi.string(),
+        DB_NAME: Joi.string(),
+      }),
+      // highlight-end
+      TypeOrmModule.forRoot({
+        ...
+      })
+    }),
+  })
+  export class AppModule {}
+  ```
+
+  먼저 ConfigModule의 속성부터 살펴보도록 합시다. 
+  **isGlobal** 속성은 모든 모듈에서 ConfigModule을 사용하기 위함입니다. 
+  예를들어 User 모듈에서 process.env.Example을 사용하고 싶다면 모듈에 의존성을 import하지 않고도 isGlobal: true로 설정하는 것만으로도 사용할 수 있습니다. 
+  **envFilePath**속성은 어떤 env 파일의 환경변수를 사용할 것인지 정합니다. 
+  **ignoreEnvFile**속성은 프로덕션 환경에서 .env파일을 무시하도록 합니다.
+
+  `Schema Validation`은 필수 환경변수가 제공되지 않았거나 유효성 검사에 통과되지 않을 경우 에러를 발생시킵니다. 
+  예를들어 위의 validationSchema 설정은 NODE_ENV값이 제공되지 않고 서버가 실행된다면 에러를 발생시키도록 하게 만드는 것 입니다. 
+  이러한 유효성 검사를 통해 우리가 서버를 실행시킬 때 필요한 환경변수가 제공되었는지를 확인할 수 있습니다.
+
+  Mafia 프로젝트에서 유효성 검사를 할 필드는 **NODE_ENV**, **DB_HOST**, **DB_PORT**, **DB_USERNAME**, **DB_PASSWORD**, **DB_NAME**로 총 6가지를 설정할 것 입니다. 
+
+
+3. .env 수정
+
+  `.env.development`와 `.env.test` 파일에서 다음과 같이 환경변수를 설정합시다.
+
+  ```
+  DB_HOST=Your_DB_HOST
+  DB_PORT=Your_DB_PORT
+  DB_USERNAME=Your_DB_USERNAME
+  DB_PASSWORD=Your_DB_PASSWORD
+  DB_NAME=Your_DB_NAME
+  ```
+
+4. app.module.ts 수정
+
+  `app.module.ts`
+  ```ts
+  import { Module } from '@nestjs/common';
+  // highlight-next-line
+  import { ConfigModule } from '@nestjs/config';
+  import { TypeOrmModule } from '@nestjs/typeorm';
+  // highlight-next-line
+  import * as Joi from 'joi';
+
+  @Module({
+    imports: [
+      ...
+      TypeOrmModule.forRoot({
+        type: 'mysql',
+        // highlight-start
+        host: process.env.DB_HOST,
+        port: +process.env.DB_PORT,
+        username: process.env.DB_USERNAME,
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_NAME,
+        // highlight-end
+        entities: [],
+        synchronize: true,
+      })
+    }),
+  })
+  export class AppModule {}
+  ```
+
+  환경변수를 사용해 외부에서 값을 불러오도록 했습니다. 
+  환경변수를 사용함으로써 데이터베이스에서 사용하는 패스워드의 노출을 막을 수 있습니다. 
+  한가지 주의해야하는 점은 `.gitignore` 파일에 `.env.*`가 추가되어 있는지 꼭 확인하시길 바랍니다. 
+  .env 파일을 깃허브에 그대로 올리게 된다면 우리가 지금까지 설정한 환경변수는 의미가 없게 됩니다. :sob:
+
+다음 글에서는 우리가 연결한 데이터베이스를 토대로 NestJS에서 회원가입을 진행해볼 예정입니다. :yum:
