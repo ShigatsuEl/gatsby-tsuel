@@ -8,3 +8,86 @@ tags: ['NestJS', 'TypeScript', 'TypeORM', 'MySQL']
 
 이번 글에서는 User Entity를 생성하고 회원가입을 구현하여 User Schema에 데이터를 생성하는 과정을 진행해 볼 것 입니다. 
 또한 NestJS에서 제공하는 Validation을 사용해 유효성 검사를 통해 원치 않는 데이터 형태가 입력되면 에러를 발생시켜 데이터 생성을 실패하도록 만들어 봅시다.
+
+## User Entity 생성하기
+
+회원가입을 진행하기 위해 우리는 `User` Entity를 생성할 것 입니다. 
+하지만 그 전에 모든 Entity가 필요하는 필드를 먼저 구현해 보도록 합시다.
+
+1. nest generate
+
+  ```shell
+  nest g mo common
+  ```
+
+  위 명령어를 사용해 common 모듈을 생성합니다. 
+  nest cli를 사용해 모듈을 생성하면 NestJS가 자동으로 app.module.ts에 Common 모듈을 import 해줄 것 입니다.
+
+  다음으로 common 디렉토리에 대한 Path Alias를 지정하도록 합니다.
+
+  ```json
+  {
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@common/*": ["src/common/*"],
+      "@/*": ["src/*"]
+    }
+  }
+  ```
+
+2. core.entity.ts 생성
+
+  `src/common/entities/core.entity.ts`
+  ```ts
+  import { CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+
+  @Entity()
+  export class Core {
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @CreateDateColumn()
+    createdAt: Date;
+
+    @UpdateDateColumn()
+    updatedAt: Date;
+  }
+  ```
+
+  Core Entity는 모든 Entity가 가지게 될 필드들로 기본적으로 id를 가지며 
+  언제 생성되었느지? 그리고 언제 업데이트가 되었는지 알려주는 필드를 가집니다.
+
+3. user.entity 생성
+
+  3-1. nest generate
+
+  ```shell
+  nest g mo users
+  ```
+
+  3-2. user.entity.ts 생성
+
+  ```ts
+  import { Column, Entity } from 'typeorm';
+
+  import { Core } from '@common/entities/core.entity';
+
+  @Entity()
+  export class User extends Core {
+    @Column({ unique: true })
+    email: string;
+
+    @Column()
+    firstName: string;
+
+    @Column()
+    lastName: string;
+
+    @Column()
+    password: string;
+  }
+  ```
+
+  User Entity는 Core Entity를 extends 하므로 id, createdAt, updatedAt 필드를 가지게 됩니다. 
+  그리고 eamil, firstName, lastName, password 필드도 가지며 email 필드는 중복될 수 없으므로 option으로 `unique:true`를 설정 했습니다.
