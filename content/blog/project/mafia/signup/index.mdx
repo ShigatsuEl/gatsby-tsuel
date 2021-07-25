@@ -91,3 +91,101 @@ tags: ['NestJS', 'TypeScript', 'TypeORM', 'MySQL']
 
   User Entity는 Core Entity를 extends 하므로 id, createdAt, updatedAt 필드를 가지게 됩니다. 
   그리고 eamil, firstName, lastName, password 필드도 가지며 email 필드는 중복될 수 없으므로 option으로 `unique:true`를 설정 했습니다.
+
+## Validation Pipe
+
+NestJS는 클라이언트로부터 받아오는 페이로드에 대해 유효성 검사를 진행할 수 있습니다. 
+이것이 무슨 말인지 이해를 돕기 위해 어플리케이션에서 회원가입을 한다고 가정해봅시다. 
+클라이언트가 회원가입을 진행하게 될 시, Form으로부터 여러 데이터들을 백엔드로 전송하게 됩니다. 
+그리고 NestJS에서는 클라이언트에게 받은 데이터를 데이터베이스에 저장할 수 있는 데이터인지 검증할 수 있게 되는데 이것은 NestJS가 제공하는 `ValidationPipe` 덕분에 가능한 일 입니다.
+
+1. ValidationPipe 선언
+
+  ```ts
+  import { ValidationPipe } from '@nestjs/common';
+  ...
+
+  async function bootstrap() {
+    const app = await NestFactory.create(AppModule);
+    // higlight-next-line
+    app.useGlobalPipes(new ValidationPipe());
+    await app.listen(3000);
+  }
+  bootstrap();
+  ```
+
+  app 모듈에서 ValidationPipe를 전역으로 사용할 것을 알려주도록 합시다.
+
+2. 패키지 설치
+
+  ```shell{outputLines: 2}
+  npm install class-validator class-transformer // npm 설치 방식
+  or
+  yarn install class-validator class-transformer // yarn 설치 방식
+  ```
+
+3. Entity 적용
+
+  3-1. Core Entity
+
+  ```ts
+  import { IsDate, IsNumber } from 'class-validator';
+  import { CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+
+  @Entity()
+  export class Core {
+    @PrimaryGeneratedColumn()
+    // highlight-next-line
+    @IsNumber()
+    id: number;
+
+    @CreateDateColumn()
+    // highlight-next-line
+    @IsDate()
+    createdAt: Date;
+
+    @UpdateDateColumn()
+    // highlight-next-line
+    @IsDate()
+    updatedAt: Date;
+  }
+  ```
+
+  3-2. User Entity
+
+  ```ts
+  import { classToPlain, Exclude } from 'class-transformer';
+  import { IsEmail, IsString } from 'class-validator';
+  import { Column, Entity } from 'typeorm';
+
+  import { Core } from '@common/entities/core.entity';
+
+  @Entity()
+  export class User extends Core {
+    @Column({ unique: true })
+    // highlight-next-line
+    @IsEmail()
+    email: string;
+
+    @Column()
+    // highlight-next-line
+    @IsString()
+    firstName: string;
+
+    @Column()
+    // highlight-next-line
+    @IsString()
+    lastName: string;
+
+    // highlight-next-line
+    @Exclude({ toPlainOnly: true })
+    @Column()
+    // highlight-next-line
+    @IsString()
+    password: string;
+  }
+  ```
+
+  class-validator와 class-transformer 라이브러리를 사용해 위와 같이 유효성 검사를 할 수 있도록 지정하였습니다. 
+  클라이언트가 만약 email을 숫자나 이메일이 아닌 형태로 적어서 회원가입을 진행한다면 이것은 NestJS ValidationPipe를 통해 유효성 검사를 실패하여 회원가입을 진행할 수 없게 됩니다. 
+  password 필드에는 @Exclude() 데코레이터를 사용했는데 이는 추후에 비밀번호를 노출시키지 않게 하기 위해 설정한 것으로 나중에 다시 설명하도록 하겠습니다.
