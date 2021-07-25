@@ -181,3 +181,89 @@ NODE_ENV값을 `development`로 지정하면 `.env.development`의 환경변수 
 
   `.env.devlopment` :heavy_plus_sign: `.env.test` 
   두개의 파일을 추가하도록 한다. 추후에 환경변수를 추가하여 사용할 예정입니다.
+
+## TypeORM + MySQL
+
+예전에 NestJS 프로젝트를 빌드하면서 PostgreSQL을 사용한 경험이 있습니다. 
+PostgreSQL은 제가 처음 사용해본 SQL 언어로 굉장히 마음에 들었지만 
+PostgreSQL에서 지원하는 윈도우 워크벤치가 실행시킬 때마다 너무 오랜시간이 걸리는 것이 불편했습니다. 
+맥OS유저였다면 PostgreSQL을 이번 프로젝트에서 사용했을지도 모르겠지만 저번에 겪었던 불편한 점을 개선하기 위해서 다른 SQL을 사용해보고 싶었습니다. 
+
+따라서 NestJS 공식문서에서 추천하는 언어이자 많은 사람들이 사용하는 MySQL을 이번 프로젝트에서 사용해볼 것이며 
+TypeScript 기반인 NestJS에서 MySQL을 그대로 사용하기엔 아까워 TypeORM을 같이 사용할 것 입니다.
+
+1. MySQL 설치
+
+  윈도우 유저라면 :point_right: [윈도우 MySQL 설치](https://goddaehee.tistory.com/277) 글을 참고하여 MySQL을 설치하세요.
+
+  Mac 유저라면 :point_right: [맥OS MySQL 설치](https://velog.io/@inyong_pang/MySQL-%EC%84%A4%EC%B9%98%EC%99%80-%EC%B4%88%EA%B8%B0-%EC%84%A4%EC%A0%95) 글을 참고하여 MySQL을 설치하세요.
+
+  설치가 완료되었다면 MySQL Workbench를 실행시켜 봅시다.
+
+  ![MySQL Workbench Home](./gatsby-project-mafia-db-03.png 'MySQL Workbench Home')
+
+  빨간색 네모 안의 플러스 버튼을 클릭하여 커넥션을 하나 생성하도록 하겠습니다.
+
+  ![MySQL Workbench Connection](./gatsby-project-mafia-db-04.png 'MySQL Workbench Connection')
+
+  이름은 무엇이든 상관없지만 포트번호는 꼭 기억하시길 바랍니다. 
+  커넥션을 생성하고 클릭하여 연결해주세요. 
+  자신이 MySQL을 설치할 때 설정했던 비밀번호를 입력하면 커넥션을 연결할 수 있습니다. 
+
+2. 데이터베이스 생성
+
+  ![MySQL Database Create](./gatsby-project-mafia-db-05.png 'MySQL Database Create')
+
+  아래의 네모를 클릭하면 현재 생성되어 있는 스키마들을 확인할 수 있습니다. 
+  우선 위에 있는 빨간색 네모를 클릭하여 데이터베이스를 생성해보도록 합시다.
+
+  ![MySQL Database Create](./gatsby-project-mafia-db-02.png 'MySQL Database Create')
+
+  다음과 같이 기본 인코딩을 설정하고 데이터베이스를 생성하도록 합니다.
+
+  ![MySQL Database Tsufia](./gatsby-project-mafia-db-06.PNG 'MySQL Database Tsufia')
+
+  생성 완료!
+
+3. 패키지 설치
+
+  ```shell{outputLines: 2}
+  npm install @nestjs/typeorm typeorm mysql2 // npm 설치
+  or
+  yarn add @nestjs/typeorm typeorm mysql2 // yarn 설치
+  ```
+
+4. Database 연동
+
+  4-1. TypeORM 모듈 설정
+
+  `app.module.ts`
+  ```ts
+  import { Module } from '@nestjs/common';
+  import { TypeOrmModule } from '@nestjs/typeorm';
+
+  @Module({
+    imports: [
+      // highlight-start
+      TypeOrmModule.forRoot({
+        type: 'mysql',
+        host: 'localhost',
+        port: 3306,
+        username: 'root',
+        password: 'dummy-password',
+        database: 'tsufia-database',
+        entities: [],
+        synchronize: true,
+      }),
+      // highlight-end
+    ],
+  })
+  export class AppModule {}
+  ```
+
+  위에 'dummy-password'는 여러분이 설정한 패스워드를 입력하시면 됩니다. 
+  당연한 이야기지만 database를 연결하는 패스워드는 절대 노출시키면 안되기 때문에 추후에 환경변수를 통해 숨겨주도록 할 것 입니다. 
+  
+  저장을 하고 서버를 재실행해보세요. 
+  혹시 `rxjs_1.lastValueFrom is not a function` 오류가 발생했다면 rxjs 패키지의 버전을 7이상으로 재설치 하시길 바랍니다. 
+  서버를 실행했을 때 아무런 에러가 발생하지 않아야 데이터베이스와 성공적으로 연결한 것 입니다. :sunglasses:
