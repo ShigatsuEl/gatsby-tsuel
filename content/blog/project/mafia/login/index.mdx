@@ -1,0 +1,18 @@
+---
+title: NestJS 로그인 구현하기(Passport Local & Jwt)
+date: 2021-07-26
+slug: /blog/project/mafia/login
+categories: ['all', 'project']
+tags: ['NestJS', 'TypeScript', 'Passport-Local', 'Passport-JWT' 'TypeORM', 'MySQL']
+---
+
+Passport는 NodeJS에서 가장 많이 사용되는 인증 라이브러리로 NestJS 역시 추천하는 방식입니다. 
+또한 NestJS는 NodeJS 위에서 작동하므로 Passport와 통합하는 방법도 이미 제공되고 있습니다. 
+따라서 이번 글에서는 NestJS 공식 문서를 참고하여 로그인을 구현할 것 입니다.
+
+Passport에는 인증 메커니즘을 구현하는 여러가지 전략을 구성하고 있는데 우리가 맨 처음으로 구현해볼 인증 메커니즘은 
+`passport-local` 전략으로 사용자 이름/비밀번호를 이용해 가장 기본적인 인증부터 시작해볼 것 입니다. 
+그 후, 서버가 인증을 증명하기 위한 후속 요청에서 인증 헤더의 전달자 토큰으로 전송할 수 있는 JWT를 발행하여 JWT를 가지고 
+있는 사용자에게만 액세스 할 수 있는 보호 경로를 생성해 보도록 합시다. 
+
+시작하겠습니다. :wink:
