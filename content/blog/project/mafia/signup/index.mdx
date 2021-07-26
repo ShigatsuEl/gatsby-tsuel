@@ -189,3 +189,70 @@ NestJS는 클라이언트로부터 받아오는 페이로드에 대해 유효성
   class-validator와 class-transformer 라이브러리를 사용해 위와 같이 유효성 검사를 할 수 있도록 지정하였습니다. 
   클라이언트가 만약 email을 숫자나 이메일이 아닌 형태로 적어서 회원가입을 진행한다면 이것은 NestJS ValidationPipe를 통해 유효성 검사를 실패하여 회원가입을 진행할 수 없게 됩니다. 
   password 필드에는 @Exclude() 데코레이터를 사용했는데 이는 추후에 비밀번호를 노출시키지 않게 하기 위해 설정한 것으로 나중에 다시 설명하도록 하겠습니다.
+
+## User DTO 만들기
+
+`DTO`가 무엇인지, 그리고 왜 필요한지에 대해 간단하게 짚고 넘어갑시다. 
+DTO는 Data Transfer Object의 약자로 데이터 전송 개체를 나타냅니다. 
+이는 클라이언트 :point_right: 서버 또는 클라이언트 :point_left: 서버 방향으로 데이터를 네트워크를 통해 전송할 때 어떠한 방식으로 전송할 것인지를 
+의미하며 대부분 객체의 형태를 띄우고 있습니다. 
+DTO를 타입스크립트 클래스 형태로 정의하게 된다면 우리가 전송하는 데이터 또는 전송받는 데이터의 형태를 명확하게 지정할 수 있게 됩니다.
+
+우리는 NestJS를 사용해 회원가입을 진행할 것이므로 가장 첫번째 DTO로 `CreateUserDto`를 만들어보도록 합시다.
+
+1. core.dto.ts 생성
+
+  Entity에서도 기본으로 가지게 되는 필수 필드들이 존재하듯이 DTO에서도 필수적으로 가지게 되는 필드들을 먼저 정의해보도록 합시다.
+
+  :heavy_plus_sign: `src/common/dtos/core.dto.ts`
+  ```ts
+  import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+
+  export class CoreOutput {
+    @IsBoolean()
+    @IsNotEmpty()
+    ok: boolean;
+
+    @IsString()
+    @IsOptional()
+    error?: string;
+  }
+  ```
+
+2. NestJS Mapped Types 패키지 설치
+
+  ```shell{outputLines: 2}
+  npm install @nestjs/mapped-types // npm 설치 방식
+  or
+  yarn install @nestjs/mapped-types // yarn 설치 방식
+  ```
+
+3. createUser.dto.ts 생성
+
+  :heavy_plus_sign: `src/users/dtos/create-user.dto.ts`
+  ```ts
+  import { PickType } from '@nestjs/mapped-types';
+  import { IsString } from 'class-validator';
+
+  import { User } from '@users/entities/user.entity';
+  import { CoreOutput } from '@common/dtos/core.dto';
+
+  // highlight-next-line
+  export class CreateUserInputDto extends PickType(User, ['email', 'firstName', 'lastName', 'password']) {
+    @IsString()
+    checkPassword: string;
+  }
+
+  // highlight-next-line
+  export class CreateUserOutputDto extends CoreOutput {}
+  ```
+
+  회원가입을 진행할 때 클라이언트는 email, firstName, lastName, password를 입력하게 될 것입니다. 
+  또한 checkPassword를 한번 더 입력하여 password가 일치하는지 확인까지 해보도록 합시다.
+  그리고 서버는 클라이언트에게 ok와 error를 응답하게 될 것 입니다.
+
+  위 코드의 하이라이트 부분은 설명을 나타내는 부분입니다. 
+  PickType은 NestJS의 Mapped Types의 한가지 기능으로 CRUD와 같은 기능을 구축할 때 User Entity 타입에 대해 변형이 필요할 때 유용하게 사용할 수 있습니다. 
+  OmitType, PartialType 등 더 많은 기능들이 있지만 CreateUserDto에서 필요한 기능은 PickType으로 
+  필요한 부분만 선택할 수 있습니다. 
+  또한 CreateUserOutputDto는 CoreOutput을 extends 하게 됨으로써 ok와 error 필드를 가지게 됩니다.
