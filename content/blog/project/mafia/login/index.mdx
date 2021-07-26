@@ -3,7 +3,7 @@ title: NestJS 로그인 구현하기(Passport Local & Jwt)
 date: 2021-07-26
 slug: /blog/project/mafia/login
 categories: ['all', 'project']
-tags: ['NestJS', 'TypeScript', 'Passport-Local', 'Passport-JWT' 'TypeORM', 'MySQL']
+tags: ['NestJS', 'TypeScript', 'Passport-Local', 'Passport-JWT', 'TypeORM', 'MySQL']
 ---
 
 Passport는 NodeJS에서 가장 많이 사용되는 인증 라이브러리로 NestJS 역시 추천하는 방식입니다. 
@@ -16,3 +16,59 @@ Passport에는 인증 메커니즘을 구현하는 여러가지 전략을 구성
 있는 사용자에게만 액세스 할 수 있는 보호 경로를 생성해 보도록 합시다. 
 
 시작하겠습니다. :wink:
+
+## Find User
+
+가장 먼저 로그인을 진행할 때 데이터베이스에 존재하는 유저가 있는지 확인하는 로직을 작성할 것 입니다.
+
+1. Get User Dto 생성
+
+  `src/users/get-user.dto.ts`
+  ```ts
+  import { CoreOutput } from '@common/dtos/core.dto';
+  import { PickType } from '@nestjs/mapped-types';
+
+  import { User } from '@users/entities/user.entity';
+  import { IsOptional } from 'class-validator';
+
+  export class GetUserInputDto extends PickType(User, ['email']) {}
+
+  export class GetUserOutputDto extends CoreOutput {
+    @IsOptional()
+    user?: User;
+  }
+  ```
+
+  클라이언트로부터 eamil을 입력받았을 때 user가 존재한다면 반환할 것이고 그렇지 않다면 error를 줄 것 입니다.
+
+2. Find One User Service
+
+  `src/users.service.ts`
+  ```ts
+  ...
+  import { GetUserInputDto, GetUserOutputDto } from '@users/dtos/get-user.dto';
+
+  @Injectable()
+  export class UsersService {
+    constructor(@InjectRepository(User) private readonly userRepository: Repository<User>) {}
+
+    ...
+
+    /* Find One User */
+    // highlight-start
+    async findOneUser(getUserInputDto: GetUserInputDto): Promise<GetUserOutputDto> {
+      try {
+        const { email } = getUserInputDto;
+        const user = await this.userRepository.findOne({ email });
+        if (!user) return { ok: false, error: '해당 유저를 찾을 수 없습니다.' };
+        return { ok: true, user };
+      } catch (error) {
+        return { ok: false, error: '유저 탐색을 실패했습니다.' };
+      }
+    }
+    // highlight-end
+  }
+  ```
+
+  데이터베이스로부터 유저가 존재하지 않다면 :point_right: `ts$return { ok: false, error: '해당 유저를 찾을 수 없습니다.' }` 
+  유저가 존재한다면 :point_right: `ts$return { ok: true, user }`를 반환합니다.
