@@ -1,0 +1,58 @@
+---
+title: Top K Frequent Elements(상위 K 빈도 요소)
+date: 2021-07-26
+slug: /blog/leetcode/771
+categories: ['all', 'leetcode']
+tags: ['Python', 'Hash-Table', 'Heap']
+---
+
+배열 **nums**와 정수 **k**가 입력값으로 주어질 때, k이상 존재하는 nums 인덱스들을 집합으로 한 배열을 출력하세요.
+
+`Example 1:`
+```
+Input: nums = [1,1,1,2,2,3], k = 2
+Output: [1,2]
+```
+
+`Example 2:`
+```
+Input: nums = [1], k = 1
+Output: [1]
+```
+
+`Constraints:`
+```
+1 <= nums.length <= 105
+k is in the range [1, the number of unique elements in the array].
+It is guaranteed that the answer is unique.
+```
+
+## 알고리즘 설계
+
+1. 가장 먼저 Counter 컬렉션으로부터 nums 배열의 해시 테이블을 구성하도록 합니다.
+
+2. 해시 테이블을 최소힙으로 만들도록 합니다. 파이썬은 최소힙을 지향하므로 개수가 가장 큰 순서가 힙의 맨 위로 들어가도록 
+  음수값을 같이 넣어 최소힙을 만듭니다.
+
+3. 최소힙으로부터 k번 만큼 heappop()메서드로 빼내어 top 리스트에 값을 append() 합니다.
+
+4. 마지막으로 top리스트를 결과값으로 출력합니다.
+
+## 작성한 코드
+
+```python{numberLines: true}
+class Solution:
+    def topKFrequent(self, nums: List[int], k: int) -> List[int]:
+        freqs = collections.Counter(nums)
+        heap = []
+        
+        for freq in freqs:
+            heapq.heappush(heap, (-freqs[freq], freq))
+            
+        top = []
+        
+        for i in range(k):
+            top.append(heapq.heappop(heap)[1])
+            
+        return top
+```
