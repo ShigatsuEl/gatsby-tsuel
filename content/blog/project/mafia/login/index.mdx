@@ -72,3 +72,73 @@ Passport에는 인증 메커니즘을 구현하는 여러가지 전략을 구성
 
   데이터베이스로부터 유저가 존재하지 않다면 :point_right: `ts$return { ok: false, error: '해당 유저를 찾을 수 없습니다.' }` 
   유저가 존재한다면 :point_right: `ts$return { ok: true, user }`를 반환합니다.
+
+## Validate User
+
+유저를 찾은 후 유저를 검증해보는 절차를 구현합니다.
+
+1. auth.module.ts 생성
+
+  ```shell
+  nest g mo auth
+  ```
+
+2. validateAuthDto 생성
+
+  :heavy_plus_sign: `src/auth/dtos/validate-auth.dto.ts`
+  ```ts
+  import { CoreOutput } from '@common/dtos/core.dto';
+  import { PickType } from '@nestjs/mapped-types';
+  import { User } from '@users/entities/user.entity';
+  import { IsOptional } from 'class-validator';
+
+  export class ValidateAuthInputDto extends PickType(User, ['email', 'password']) {}
+
+  export class ValidateAuthOutputDto extends CoreOutput {
+    @IsOptional()
+    user?: User;
+  }
+  ```
+
+3. auth.service.ts 생성
+
+  ```shell
+  nest g service auth
+  ```
+
+4. Validate User Service 로직 구현
+
+  `src/auth/auth.service.ts`
+  ```ts
+  import { Injectable } from '@nestjs/common';
+
+  // highlight-next-line
+  import { ValidateAuthInputDto, ValidateAuthOutputDto } from '@auth/dtos/validate-auth.dto';
+  import { UsersService } from '@users/users.service';
+
+  @Injectable()
+  export class AuthService {
+    constructor(private readonly usersService: UsersService) {}
+
+    /* Validate User */
+    // highlight-start
+    async validateUser(validateAuthInputDto: ValidateAuthInputDto): Promise<ValidateAuthOutputDto> {
+      try {
+        const { email, password } = validateAuthInputDto;
+        const { user } = await this.usersService.findOneUser({ email });
+        if (!user) return { ok: false, error: '이메일 계정이 존재하지 않습니다.' };
+        if (user && user.password !== password) {
+          return { ok: false, error: '패스워드가 일치하지 않습니다.' };
+        }
+        return { ok: true, user };
+      } catch (error) {
+        return { ok: false, error: '로그인 인증에 실패하였습니다.' };
+      }
+    }
+  }
+    // highlight-end
+  ```
+
+  usersService의 findOneUser 메서드로부터 user가 있는지 검증, 
+  user가 존재한다면 패스워드 입력이 일치했는지 검증한다. 
+  검증 도중 에러가 발생하면 `ts$return { ok: false, error: '로그인 인증에 실패하였습니다.' }`를 리턴합니다.
