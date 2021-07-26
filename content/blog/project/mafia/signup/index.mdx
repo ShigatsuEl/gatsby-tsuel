@@ -121,7 +121,7 @@ NestJS는 클라이언트로부터 받아오는 페이로드에 대해 유효성
   ```shell{outputLines: 2}
   npm install class-validator class-transformer // npm 설치 방식
   or
-  yarn install class-validator class-transformer // yarn 설치 방식
+  yarn add class-validator class-transformer // yarn 설치 방식
   ```
 
 3. Entity 적용
@@ -224,7 +224,7 @@ DTO를 타입스크립트 클래스 형태로 정의하게 된다면 우리가 �
   ```shell{outputLines: 2}
   npm install @nestjs/mapped-types // npm 설치 방식
   or
-  yarn install @nestjs/mapped-types // yarn 설치 방식
+  yarn add @nestjs/mapped-types // yarn 설치 방식
   ```
 
 3. createUser.dto.ts 생성
@@ -352,3 +352,162 @@ DTO를 타입스크립트 클래스 형태로 정의하게 된다면 우리가 �
   저장을 하고 서버에 에러가 발생하지 않았는지 확인하시길 바랍니다. 
   만약 에러가 아직 존재한다면 Inject하는 부분에서 실수를 한 확률이 크다는 점을 주의해주세요.
 
+## Create User
+
+이제 본격적으로 회원가입을 진행해보겠습니다.
+
+1. Create User 서비스 로직
+
+  `src/users.service.ts`
+  ```ts
+  import { Injectable } from '@nestjs/common';
+  import { InjectRepository } from '@nestjs/typeorm';
+  import { Repository } from 'typeorm';
+  import { User } from '@users/entities/user.entity';
+  import { CreateUserInputDto, CreateUserOutputDto } from '@users/dtos/create-user.dto';
+  @Injectable()
+  export class UsersService {
+    constructor(@InjectRepository(User) private readonly userRepository: Repository<User>) {}
+
+    async createUser(createUserInputDto: CreateUserInputDto): Promise<CreateUserOutputDto> {
+    // highlight-start
+      try {
+        const { email, firstName, lastName, password, checkPassword } = createUserInputDto;
+        const userExist = await this.userRepository.findOne({ email });
+
+        // 유저 중복 & 패스워드 일치 검사
+        if (userExist) return { ok: false, error: '이미 존재하는 사용자 이름입니다.' };
+        if (password !== checkPassword) return { ok: false, error: '패스워드가 일치하지 않습니다.' };
+
+        // 유저 생성
+        const user = this.userRepository.create({ email, firstName, lastName, password });
+        await this.userRepository.save(user);
+
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, error: '계정을 생성할 수 없습니다.' };
+      }
+    }
+    // highlight-end
+  }
+  ```
+
+  클라이언트로부터 입력받은 createUserInputDto 로부터 User Entity에 중복되는 email 계정이 존재하는지 확인합니다. 
+  이미 생성한 유저가 존재하면 `ts${return ok:false, error: '이미 존재하는 사용자 이름입니다.'}`를 출력합니다. 
+  NestJS와 TypeScript의 힘으로 ok와 error이외의 다른 값을 리턴하면 createUserOutputDto 로부터 에러를 받게 됩니다. 
+  DTO를 사용하고 있기 때문에 혹여나 이상한 값을 사용하거나 리턴할 경우를 막아주는 것 입니다. :blush: 
+
+  같은 방법으로 패스워드와 패스워드 체크가 일치하는지 확인하며 
+  유효성 검사를 모두 통과하면 email, firstName, lastName, password를 토대로 유저를 생성하도록 합니다. 
+  유저를 생성하는 과정중에 어떠한 에러가 발생하여 생성할 수 없는 경우에는 
+  `ts$return { ok: false, error: '계정을 생성할 수 없습니다.' }`를 반환하도록 합니다.
+
+2. 패스워드 해시
+
+  아직 끝나지 않았습니다. 
+  이 상태로 유저를 생성하게 된다면 패스워드가 그대로 노출되게 됩니다. 
+  예를들어 패스워드를 `1234`로 설정한다면 데이터베이스에 `1234`값이 그대로 저장됩니다. 
+  이는 보안적으로 매우 좋지 않습니다. 하다못해 패스워드는 누군가 탈취하게 되더라도 알아볼 수 없는 형태를 가져야 합니다. 
+
+  createUser 메서드에서 패스워드를 해시하는 방법도 있지만 패스워드를 해시하는 로직은 생각보다 여러곳에서 사용될 수 있습니다. 
+  따라서 공통된 로직은 한 곳에 보관해두고 import 해오는 방식으로 사용해 보겠습니다.
+
+  2-1. 패키지 설치
+
+    ```shell{outputLines: 3}
+    npm install bcrypt // npm 설치 방식
+    npm install -D @types/bcrypt // npm 설치 방식
+    or
+    yarn add bcrypt // yarn 설치 방식
+    yarn add -D @types/bcrypt // yarn 설치 방식
+    ```
+
+  2-1. BeforeInsert
+
+    `users/entities/user.entity.ts`
+    ```ts
+    import * as bcrypt from 'bcrypt';
+    import { Exclude } from 'class-transformer';
+    import { IsEmail, IsString } from 'class-validator';
+    import { BeforeInsert, Column, Entity } from 'typeorm';
+
+    import { Core } from '@common/entities/core.entity';
+
+    export class User extends Core {
+      ...
+      @Exclude({toPlainOnly: true})
+      @Column()
+      @IsString()
+      password: string;
+
+      // highlight-start
+      @BeforeInsert()
+      async hashPassword() {
+        this.password = await bcrypt.hash(this.password, 10);
+      }
+      // highlight-end
+    }
+    ```
+
+    @BeforeInsert 데코레이터는 데이터베이스에 유저가 생성되기전에 hashPassword 메서드를 실행해줄 것 입니다. 
+    bcrypt.hash 메서드를 통해 패스워드를 해시하세요 :)
+
+이제 createUser의 로직은 모두 끝났습니다! 
+우리가 만든 createUser 로직을 테스트하기 위해서 API를 테스트 해보도록 합시다. 
+테스트를 위해 저는 [Insomnia](https://insomnia.rest/download 'Insomnia')를 사용할 것 입니다.
+
+회원가입이 성공하는 테스트 케이스를 먼저 소개하겠습니다.
+
+- Success
+
+  ![Create User Success](./gatsby-project-mafia-signup-01.PNG 'Create User Success')
+
+  email, firstName, lastName, password, checkPassword를 정확히 입력하도록 해봅시다.
+
+- Success Result
+
+  ![Create User Success Result](./gatsby-project-mafia-signup-02.PNG 'Create User Success Result')
+
+  :astonished: :astonished: :astonished:
+
+  `ok: true`가 출력된 것을 보아 회원가입이 성공한 것 입니다. 
+  정말 회원가입이 된 것인지 MySQL 워크벤치를 실행시켜 직접 확인해봅시다.
+
+  ![Create User Success Result](./gatsby-project-mafia-signup-03.PNG 'Create User Success Result')
+
+  :sunglasses:
+
+  아주 섹시합니다.
+
+  그렇다면 이제 로직에 위배되는 테스트 케이스도 확인해봅시다.
+
+- Fail(Exist)
+
+  회원가입이 이미 된 계정을 다시한번 회원가입해보도록 해보세요 :) 
+  어떠한 결과가 나오시나요?
+
+- Fail(Exist) Result
+
+  ![Create User Fail Exist Result](./gatsby-project-mafia-signup-04.PNG 'Create User Fail Exist Result')
+
+  Yeah!! 실패한 것을 보니 동일 계정으로 회원가입 하는 것은 실패하는 것을 알 수 있습니다.
+
+- Fail(Password)
+
+  ![Create User Fail Password](./gatsby-project-mafia-signup-05.PNG 'Create User Fail Password')
+
+  위의 테스트 케이스를 피하기 위해서 이메일을 다른 계정으로 하고 패스워드와 패스워드 체크를 일부터 틀리게 진행해 봅시다.
+
+
+- Fail(Password) Result
+
+  ![Create User Fail Password Result](./gatsby-project-mafia-signup-06.PNG 'Create User Fail Password Result')
+
+  패스워드가 일치하지 않는 경우도 역시 회원가입을 실패하게 됩니다.
+
+이것으로 NestJS 회원가입은 끝입니다. 
+Type을 작성하는 작업 때문에 시간은 비록 오래 걸렸지만 대신에 회원가입 로직을 매우 짧고 간편하게 구현할 수 있었습니다. 
+만약 NodeJS였다면 클라이언트로부터 받는 값에 대해 유효성 검사에 대한 로직이 필요할 것이며 로직이 더욱 길어지게 될 것 입니다. 
+하지만 NestJS는 DTO + ValidationPipe 덕분에 안정적으로 코드를 작성할 수 있게 되었으며 
+Controller + Service를 가진 구조 덕분에 빠르게 어플리케이션을 빌드할 수 있을지도 모릅니다. 
+여러분은 무엇이 더 마음에 드셨나요? :blush:
