@@ -1,0 +1,103 @@
+---
+title: Jewels and Stones(보석과 돌돌)
+date: 2021-07-26
+slug: /blog/leetcode/771
+categories: ['all', 'leetcode']
+tags: ['Python', 'Hash-Table', 'String']
+---
+
+Jewels와 Stones 문자열이 주어질 때, 당신이 가지고 있는 돌들 중에 보석은 몇개나 가지고 있는지 출력하세요.
+
+`Example 1:`
+```
+Input: jewels = "aA", stones = "aAAbbbb"
+Output: 3
+```
+
+`Example 2:`
+```
+Input: jewels = "z", stones = "ZZ"
+Output: 0
+```
+
+`Constraints:`
+```
+1 <= jewels.length, stones.length <= 50
+jewels and stones consist of only English letters.
+All the characters of jewels are unique.
+```
+
+## 알고리즘 설계
+
+1. 해시 테이블을 이용하도록 합니다.
+
+2. 돌이 해시 테이블에 없다면 값을 1로 넣어주며 테이블에 존재한다면 값을 1씩 더해줍니다.
+
+3. 돌들을 모든 순환문을 통해 해시 테이블에 저장했다면 이제 돌을 가지고 있는 보석의 개수를 알 수 있습니다.
+
+4. 보석이 해시 테이블에 존재한다면 돌들에 포함하므로 그만큼 count값에 더해주어 결과값으로 출력합니다.
+
+## 작성한 코드
+
+```python{numberLines: true}
+class Solution:
+    def numJewelsInStones(self, jewels: str, stones: str) -> int:
+        dict = {}
+        count = 0
+        
+        for char in stones:
+            if char not in dict:
+                dict[char] = 1
+            else:
+                dict[char] += 1
+        
+        for char in jewels:
+            if char in dict:
+                count += dict[char]
+                
+        return count
+```
+
+## 다른 방법
+
+- 파이썬 defaultdict을 활용하는 법
+
+  ```python{numberLines: true}
+  class Solution:
+    def numJewelsInStones(self, J: str, S: str) -> int:
+        freqs = collections.defaultdict(int)
+        count = 0
+
+        # 비교 없이 돌(S) 빈도 수 계산
+        for char in S:
+            freqs[char] += 1
+
+        # 비교 없이 보석(J) 빈도 수 합산
+        for char in J:
+            count += freqs[char]
+
+        return count
+  ```
+
+- 파이썬 Counter 컬렉션을 활용하는 법
+
+  ```python{numberLines: true}
+  class Solution:
+      def numJewelsInStones(self, J: str, S: str) -> int:
+          freqs = collections.Counter(S)  # 돌(S) 빈도 수 계산
+          count = 0
+
+          # 비교 없이 보석(J) 빈도 수 합산
+          for char in J:
+              count += freqs[char]
+
+          return count
+  ```
+
+- 파이썬으로 코드 작성
+
+  ```python{numberLines: true}
+  class Solution:
+    def numJewelsInStones(self, J: str, S: str) -> int:
+        return sum(s in J for s in S)
+  ```
