@@ -301,6 +301,86 @@ Passport에서 제공하는 Local Strategy를 구현하여 유효한 사용자�
   따라서 LocalStrategy 전략으로 req.user을 보내기전에 `classToPlain` 메서드를 통해 User 클래스를 plain으로 변경하는 것 입니다.
   그렇다고 palin 타입으로 반환하면 타입 오류가 발생하므로 다시 `plainToClass` 메서드로 변경하여 리턴하도록 합시다.
 
+## Local Login
+
+몇가지만 업데이트 한 후 로그인 테스트를 진행해 봅시다.
+
+1. auth.controller.ts 생성
+
+  ```shell
+  nest g co auth
+  ```
+
+2. auth.module.ts 수정
+
+  `src/auth/auth.module.ts`
+  ```ts
+  import { Module } from '@nestjs/common';
+    // highlight-next-line
+  import { PassportModule } from '@nestjs/passport';
+
+  import { AuthController } from '@auth/auth.controller';
+  import { AuthService } from '@auth/auth.service';
+    // highlight-next-line
+  import { LocalStrategy } from '@auth/strategies/local.strategy';
+  import { UsersModule } from '@users/users.module';
+
+  @Module({
+    // highlight-start
+    imports: [UsersModule, PassportModule],
+    providers: [AuthService, LocalStrategy],
+    controllers: [AuthController],
+    // highlight-end
+  })
+  export class AuthModule {}
+  ```
+
+  PassportModule을 import하고 LocalStrategy를 providers에 제공해줘야 저장했을 때 에러없이 서버가 동작할 것 입니다.
+
+3. auth.controller.ts 수정
+
+  `src/auth/auth.controller.ts`
+  ```ts
+  import { Controller, Post, Request, UseGuards } from '@nestjs/common';
+  import { AuthGuard } from '@nestjs/passport';
+
+  // highlight-start
+  @Controller('auth')
+  export class AuthController {
+    @UseGuards(AuthGuard('local'))
+    @Post('login')
+    async login(@Request() req) {
+      return req.user;
+    }
+  }
+  // highlight-end
+  ```
+
+  위 코드는 로그인이 진행되면 req.user를 리턴할 것 입니다. 
+  또한 @nestjs/passport에서 AuthGuard를 가져와 `@UseGuards(AuthGuard('local'))`와 같이 local 전략을 사용할 것임을 명시합니다. 
+  현재는 Passport로부터 사용하는 전략이 하나밖에 없어 사용하는 의미가 잘 와닿지 않을 수 있으나 
+  곧 사용하게 될 JWT 전략이나 소셜 로그인을 통한 전략을 구분하기 위해서는 사용하는 것이 좋습니다.
+
+이제 Insomnia에서 테스트를 해보도록 하겠습니다. 
+이전 글에서 회원가입한 유저로 로그인을 진행해 볼게요.
+
+- Passport Local Strategy Login
+
+  ![Passport Local Strategy Login](./gatsby-project-mafia-login-01.PNG 'Passport Local Strategy Login')
+
+- Passport Local Strategy Login Result
+
+  ```
+  {
+    id: 1,
+    email: "admin@gmail.com",
+    firstName: "이",
+    lastName: "민찬",
+  }
+  ```
+
+  위와 같이 유저 정보를 확인할 수 있다면 성공적으로 Passport LocalStrategy를 통해 로그인을 한 것 입니다. :heart_eyes:
+
 여기까지 흐름을 정확히 정리하고 넘어가도록 하겠습니다. 
 
 - 클라이언트 측에서 이메일/패스워드로 로그인 
