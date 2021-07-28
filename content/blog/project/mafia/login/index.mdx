@@ -688,12 +688,14 @@ req.user에 제공해줄 것 입니다.
   `src/users/users.controller.ts`
   ```ts
   ...
+  // highlight-next-line
   import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
   @Controller('users')
   export class AppController {
     ...
 
+    // highlight-next-line
     @UseGuards(JwtAuthGuard)
     @Get('profile')
     getProfile(@Request() req) {
@@ -702,8 +704,53 @@ req.user에 제공해줄 것 입니다.
   }
   ```
 
-이제 우리는 JWT로부터 토큰을 발급받고 베어러토큰을 요청헤더에 포함하여 유저의 정보를 가져올 수 있습니다. :blush:
+이제 우리는 JWT로부터 토큰을 발급받고 베어러토큰을 요청헤더에 포함하여 유저의 정보를 가져올 수 있습니다. :blush: 
+`users/profile` 경로에서 `req.user` 객체를 받아올 수 있다면 성공적으로 JwtStrategy를 적용한 것 입니다.
+
+## 테스트 및 마무리
 
 JwtStrategy를 테스트 하면서 문제가 없는지 확인하도록 합시다. 
 지금까지 한 코드를 저장하고 서버에 에러가 없는지 확인하도록 하세요. 
 서버에 이상이 생겼다면 module에서 주입하는 부분에 빠진 것이 없나 확인하시길 바랍니다.
+
+- Login
+
+  ![Passport JWT Login](./gatsby-project-mafia-login-01.PNG 'Passport JWT Login')
+
+  이전에 회원가입한 계정으로 로그인을 시도해 보겠습니다.
+
+- Login Result
+
+  ![Passport JWT Login Result](./gatsby-project-mafia-login-03.PNG 'Passport JWT Login Result')
+
+  토큰이 정상적으로 발급 되었습니다 :) :heart_eyes: 그렇다면 이제 `users/profile`에서 `req.user`객체의 정보를 받아봅시다.
+
+- Get User Profile
+
+  ![Passport JWT Get User Profile](./gatsby-project-mafia-login-04.PNG 'Passport JWT Get User Profile')
+
+  로그인을 통해 얻은 access_token을 요청헤더의 베어러토큰에 제공해준 후 `http://localhost:3000/users/profile` 경로에서 
+  `Get` 요청을 하도록 합시다.
+
+- Get User Profile Result
+
+  ![Passport JWT Get User Profile Result](./gatsby-project-mafia-login-02.PNG 'Passport JWT Get User Profile Result')
+
+  유저의 정보를 받아오는데 성공했습니다! :joy: 
+  JwtStrategy를 통해 토큰을 발급 받을 수 있으며 토큰을 통해 유저의 정보를 가져올 수도 있게 되었습니다.
+
+이제 우리가 최종적으로 구현한 로그인의 로직 플로우를 살펴본 후 마무리를 짓도록 하겠습니다.
+
+- 클라이언트가 로그인을 진행하면 JWT에 `Header` | `Payload` | `Signature`등의 정보를 JSON에 담아 서명하여 `access_token`을 발급하여 
+  클라이언트에게 제공합니다.
+- 서버로부터 받은 토큰을 요청헤더의 베어러토큰에 제공해 서버에 요청을 하면 서버가 토큰으로부터 유효한 사용자인지 인증한 후 토큰을 복호화하여 
+  원래의 payload를 받아 클라이언트에게 `req.user` 형태로 제공하게 됩니다.
+- 따라서 JwtStrategy의 인증을 받은 사용자는 req.user로부터 사용자의 정보를 사용할 수 있게 되며 그렇지 않은 자는 로그인을 거쳐야만 할 것 입니다.
+
+JWT는 저장소 또는 데이터베이스에 정보를 저장하는 세션과 달리 어디에도 저장하지 않고 단지 토큰 형태로 전송되며 
+누군가 토큰을 탈취해가도 수정하게 되면 토큰이 변경되기 때문에 바로 알아챌 수 있다는 장점등이 존재하지만 
+암호화가 풀린다면 사용자의 정보가 그대로 노출되기 때문에 페이로드에 담을 수 있는 정보에는 한계가 있어어 
+최소한의 정보만을 담고 있어야 한다는 것과 토큰이 한번 생성되면 삭제할 수 없다는 단점등이 있습니다.
+
+이러한 단점을 해결하기 위한 방법으로 토큰의 생성주기를 짧게 만들거나 refresh_token의 발급과 같은 해결책이 필요하며 
+우리가 선택한 인증방식의 취약점을 잘 고려해야 할 것 입니다. :sunglasses:
