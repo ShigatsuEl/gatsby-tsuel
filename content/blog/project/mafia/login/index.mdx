@@ -468,8 +468,8 @@ JWT의 자세한 설명을 하기보다 실제 어떻게 JWT가 인증의 후속
       const { ok, error, data } = loginAuthInputDto;
       if (ok === false) return { ok: false, error };
       if (data == null) return { ok: false, error: '토큰을 발급 받을 수 없습니다.' };
-      const { id, email, firstName, lastName } = data;
-      const payload = { id, email, firstName, lastName };
+      const { id } = data;
+      const payload = { id };
       return {
         ok: true,
         access_token: this.jwtService.sign(payload),
@@ -483,6 +483,7 @@ JWT의 자세한 설명을 하기보다 실제 어떻게 JWT가 인증의 후속
   마찬가지로 '토큰을 발급 받을 수 없음'을 클라이언트에게 알려줄 것 입니다. 
   에러가 없다면 유저로부터 payload를 구성합니다. 
   JWT에서 payload는 유저의 정보를 담을 객체를 뜻하며 후에 토큰이 유효한 사용자에게 유저 정보를 제공할 객체가 됩니다. 
+  단, JWT가 탈취당했을 때를 대비하여 payload에 담을 내용은 최소한으로 하는 것이 좋을 수 있습니다.(email, firstName... 등은 숨긴다) 
   payload에 유저에 관한 정보를 담았다면 @nest/jwt 패키지로부터 jwtService 클래스의 sign메서드의 인자로 제공해 
   `access_token`을 발급하여 결과값으로 전달하도록 합니다.
 
@@ -549,6 +550,8 @@ JWT의 자세한 설명을 하기보다 실제 어떻게 JWT가 인증의 후속
   import { AuthGuard } from '@nestjs/passport';
   import { LoginAuthOutputDto } from '@auth/dtos/login-auth.dto';
 
+  // highlight-next-line
+  // 이 부분은 사실 auth.interface.ts에 정의하는 것이 좋습니다.
   // highlight-next-line
   type RequestWithUser = Request & { user: ValidateAuthOutputDto };
 
