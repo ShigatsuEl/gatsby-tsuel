@@ -369,13 +369,15 @@ Passport에는 인증 메커니즘을 구현하는 여러가지 전략을 구성
   // highlight-end
   ```
 
-  위 코드는 로그인이 진행되면 req.user를 리턴할 것 입니다. 
-  또한 @nestjs/passport에서 AuthGuard를 가져와 `@UseGuards(AuthGuard('local'))`와 같이 local 전략을 사용할 것임을 명시합니다. 
+  위 코드는 로그인이 진행되면 LocalStrategy 전략을 거쳐 성공한다면 req.user를 리턴할 것 입니다. 
+  req.user는 ValidateAuthOutputDto에 의해 `ok, error, data`를 가질 것 입니다. 
+
+  @nestjs/passport의 AuthGuard를 이용해 `@UseGuards(AuthGuard('local'))`와 같이 local 전략을 사용할 것임을 명시합니다. 
   현재는 Passport로부터 사용하는 전략이 하나밖에 없어 사용하는 의미가 잘 와닿지 않을 수 있으나 
   곧 사용하게 될 JWT 전략이나 소셜 로그인을 통한 전략을 구분하기 위해서는 사용하는 것이 좋습니다.
 
 이제 Insomnia에서 테스트를 해보도록 하겠습니다. 
-이전 글에서 회원가입한 유저로 로그인을 진행해 볼게요.
+저는 이전 글에서 회원가입한 유저로 로그인을 진행 해보도록 하겠습니다.
 
 - Passport Local Strategy Login
 
@@ -385,10 +387,13 @@ Passport에는 인증 메커니즘을 구현하는 여러가지 전략을 구성
 
   ```
   {
-    id: 1,
-    email: "admin@gmail.com",
-    firstName: "이",
-    lastName: "민찬",
+    ok: true,
+    data: {
+      id: 1,
+      email: "admin@gmail.com",
+      firstName: "이",
+      lastName: "민찬",
+    }
   }
   ```
 
@@ -398,7 +403,7 @@ Passport에는 인증 메커니즘을 구현하는 여러가지 전략을 구성
 이해한 것을 정리하기 위해 다시 한번 정확히 짚고 넘어가도록 합시다.
 
 - 클라이언트 측에서 이메일/패스워드로 로그인
-- `users.service.ts`의 `findOneUser`메서드로부터 user를 찾는다. 
+- `users.service.ts`의 `findOneUser`메서드로부터 email을 가진 user를 찾는다. 
 - user가 존재한다면 `auth.service.ts`의 `validateUser` 메서드로부터 user 검증을 진행 
 - user 검증이 완료되면 `LocalStrategy` 전략의 `validate` 메서드를 통해 user를 plain형태로 필터링을 거쳐 
 다시 클래스 형태로 변환하여 `req.user`로 넘겨주게 된다.
@@ -407,19 +412,19 @@ Passport에는 인증 메커니즘을 구현하는 여러가지 전략을 구성
 
 우리는 이제 Passport LocalStrategy를 사용해 유저 정보를 `req.user`로부터 가져올 수 있다는 것을 알 수 있습니다. 
 하지만 아직 완전한 로그인을 구현하기까지 큰 문제점이 남아있습니다. 
-그것은 바로 로그인을 통해 유저의 정보를 가져올 수 있지만 유저의 정보를 기억하지는 못한다는 것 입니다. 
+로그인을 통해 유저의 정보를 가져올 수 있지만 아직 유저의 정보를 기억하지는 못한다는 것 입니다. 
 예를 들어 로그인 후에 로그인 페이지 외에 다른 페이지로 이동한다면 `req.user`의 유저 객체의 정보는 모두 휘발유처럼 날아갈 것 입니다. 
 이것은 HTTP 프로토콜이 Connenctionless(비연결상태)하며 Stateless(비상태유지)하기 때문입니다. 
 즉, 유저 정보를 기억할 수 있는 지속성이 존재하지 않는다는 것 입니다. 
-이를 해결하기 위한 방법으로는 대표적으로 쿠키와 세션을 이용하는 방법이 있으며 
-쿠키와 세션 방식은 클라이언트가 로그인을 완료했을 때 서버는 클라이언트에게 세션ID값을 쿠키로 제공하며 
-그 이후에 발생하는 클라이언트의 모든 요청은 쿠키와 함께 서버에 전송함으로써 유효한 세션ID인지 저장소로부터 확인하게 되면서 
+위의 문제를 해결하기 위한 방법으로는 대표적으로 쿠키와 세션을 이용하는 방법이 있으며 
+이는 클라이언트가 로그인을 완료했을 때 서버는 클라이언트에게 세션ID값을 쿠키로 제공하여 
+그 이후에 발생하는 클라이언트의 모든 요청은 쿠키와 함께 서버에 전송함으로써 유효한 세션ID임을 검증하게 되고 
 해당 사용자가 누구인지 식별할 수 있게 되는 것입니다.
 
 NestJS는 이러한 후속 호출에 대하여 식별할 수 있는 방안으로 `JWT(JSON Web Token)`을 소개하고 있습니다. 
 Jwt는 쿠키와 세션 방식과 다르게 데이터베이스에 접근하여 사용자 정보를 가져오는 것이 아니고 
 사용자 인증에 필요한 정보를 JSON 객체에 담아 암호화/서명 하는 방법을 말합니다. 
-JWT의 자세한 설명을 하기보다 실제 어떻게 JWT가 인증의 후속조치를 돕는지 알아보는 것이 
+JWT의 자세한 설명을 하기보다 실제 어떻게 JWT가 인증의 후속조치를 돕는지 코드를 통해 알아보는 것이 
 더 빠른 이해를 도와줄 것 입니다.
 
 ## JWT Login
@@ -447,9 +452,6 @@ JWT의 자세한 설명을 하기보다 실제 어떻게 JWT가 인증의 후속
     access_token?: string;
   }
   ```
-
-  req.user 객체를 파라미터로 전달할 것이며 ok, error, data로 이루어져 있습니다. 
-  그리고 JWT 인증을 성공적으로 마치면 토큰을 발급하여 ok, error, access_token의 결과를 출력할 것 입니다.
 
 2. 패키지 설치
 
@@ -492,23 +494,15 @@ JWT의 자세한 설명을 하기보다 실제 어떻게 JWT가 인증의 후속
   }
   ```
 
-  로그인 진행 중 에러가 발생하면 그대로 에러를 결과값으로 보여주고 `req.user.data`값에 user 정보가 아무것도 들어있지 않다면 
-  마찬가지로 '토큰을 발급 받을 수 없음'을 클라이언트에게 알려줄 것 입니다. 
+  로그인 진행 중 에러가 발생하면 에러를 결과값으로 보여주고 `req.user.data`값에 user 정보가 아무것도 들어있지 않다면 
+  '토큰을 발급 받을 수 없음' 에러를 클라이언트에게 전달합니다. 
   에러가 없다면 유저로부터 payload를 구성합니다. 
-  JWT에서 payload는 유저의 정보를 담을 객체를 뜻하며 후에 토큰이 유효한 사용자에게 유저 정보를 제공할 객체가 됩니다. 
-  단, JWT가 탈취당했을 때를 대비하여 payload에 담을 내용은 최소한으로 하는 것이 좋을 수 있습니다.(email, firstName... 등은 숨긴다) 
+  payload는 JWT에서 유저의 정보를 담을 객체를 뜻하며 후에 토큰이 유효한 사용자에게 유저 정보를 제공할 객체가 됩니다. 
+  만약 JWT가 탈취당했을 때를 대비하여 payload에 담을 내용은 최소한으로 하는 것이 좋을 수 있습니다.(email, firstName... 등은 숨긴다) 
   payload에 유저에 관한 정보를 담았다면 @nest/jwt 패키지로부터 jwtService 클래스의 sign메서드의 인자로 제공해 
   `access_token`을 발급하여 결과값으로 전달하도록 합니다.
 
-4. jwt.constants.ts 생성
-
-  :heavy_plus_sign: `src/auth/jwt.constants.ts`
-  ```ts
-  export const jwtConstants = {
-    secret: `${process.env.JWT_SECRET_KEY}`,
-    expiresIn: 5 * 60,
-  };
-  ```
+4. JWT_SECRET_KEY 환경변수 추가
 
   `app.module.ts`
   ```ts
@@ -518,7 +512,10 @@ JWT의 자세한 설명을 하기보다 실제 어떻게 JWT가 인증의 후속
         ...
         validationSchema: Joi.object({
           ...
-          JWT_SECRET_KEY: Joi.string(),
+          // highlight-start
+          JWT_ACCESS_TOKEN_SECRET_KEY: Joi.string(),
+          JWT_ACCESS_TOKEN_EXPIRATION_TIME: Joi.string(),
+          // highlight-end
         }),
       }),
     ],
@@ -526,10 +523,7 @@ JWT의 자세한 설명을 하기보다 실제 어떻게 JWT가 인증의 후속
   export class AppModule {}
   ```
 
-  jwt.constants.ts 파일의 목적은 jwt 모듈 내의 여러군데에서 사용되는 상수를 공유하기 위함입니다. 
-  JwtStrategy에 제공할 상수 secret과 expiresIn을 선언합니다. 
-  여기서 secret값은 토큰을 발급할 때 사용하는 랜덤값으로 절대로 노출시켜서는 안됩니다. 
-  환경변수로 사용하여 외부에 노출되지 않도록 보관하시길 추천드립니다.
+  JwtModule에 제공할 환경변수 JWT_ACCESS_TOKEN_SECRET_KEY과 JWT_ACCESS_TOKEN_EXPIRATION_TIME 선언합니다. 
 
 5. JwtModule import
 
@@ -539,34 +533,51 @@ JWT의 자세한 설명을 하기보다 실제 어떻게 JWT가 인증의 후속
   // highlight-next-line
   import { JwtModule } from '@nestjs/jwt';
   // highlight-next-line
-  import { jwtConstants } from '@auth/auth.contants';
+  import { ConfigModule, ConfigService } from '@nestjs/config';
 
   @Module({
     imports: [
       UsersModule,
       PassportModule,
-      // highlight-next-line
-      JwtModule.register({ secret: jwtConstants.secret, signOptions: { expiresIn: jwtConstants.expiresIn } }),
+      // highlight-start
+      JwtModule.registerAsync({
+        imports: [ConfigModule],
+        inject: [ConfigService],
+        useFactory: async (configService: ConfigService) => ({
+          secret: configService.get('JWT_ACCESS_TOKEN_SECRET_KEY'),
+          signOptions: {
+            expiresIn: +configService.get('JWT_ACCESS_TOKEN_EXPIRATION_TIME'),
+          },
+        }),
+      }),
+      // highlight-end
     ],
-    providers: [AuthService, LocalStrategy],
+    providers: [AuthService, LocalStrategy, JwtStrategy],
     controllers: [AuthController],
   })
+  export class AuthModule {}
   ```
 
   JWT를 사용하기 위해 JwtModule을 반드시 import하는 것을 잊지 마세요! 
+  또한 module을 주입하기 전에 ConfigService를 사용할 것이므로 ConfigModule을 import한 후 로드할 수 있도록 합니다.
 
 6. auth.controller.ts 수정
+
+  :heavy_plus_sign: `src/auth/auth.interface.ts`
+  ```ts
+  import { Request } from 'express';
+
+  import { ValidateAuthOutputDto } from '@auth/dtos/validate-auth.dto';
+
+  export type RequestWithUser = Request & { user: ValidateAuthOutputDto };
+  ```
 
   `src/auth/auth.controller.ts`
   ```ts
   ...
   import { AuthGuard } from '@nestjs/passport';
   import { LoginAuthOutputDto } from '@auth/dtos/login-auth.dto';
-
-  // highlight-next-line
-  // 이 부분은 사실 auth.interface.ts에 정의하는 것이 좋습니다.
-  // highlight-next-line
-  type RequestWithUser = Request & { user: ValidateAuthOutputDto };
+  import { RequestWithUser } from '@auth/auth.interface';
 
   @Controller('auth')
   export class AuthController {
@@ -593,6 +604,15 @@ req.user에 제공해줄 것 입니다.
 
 1. jwt.strategy.ts 생성
 
+  `src/auth/auth.interface.ts`
+  ```ts
+  ...
+
+  export interface Payload {
+    id: number;
+  }
+  ```
+
   :heavy_plus_sign: `src/auth/strategies/jwt.strategy.ts`
   ```ts
   import { Injectable } from '@nestjs/common';
@@ -600,36 +620,35 @@ req.user에 제공해줄 것 입니다.
   // highlight-nextline
   import { ExtractJwt, Strategy } from 'passport-jwt';
 
-  import { jwtConstants } from '@auth/auth.constants';
-  import { User } from '@users/entities/user.entity';
+  import { Payload } from '@auth/auth.interface';
 
   @Injectable()
   // highlight-start
   export class JwtStrategy extends PassportStrategy(Strategy) {
-    constructor() {
+    constructor(private readonly configService: ConfigService) {
       super({
         jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
         ignoreExpiration: false,
-        secretOrKey: jwtConstants.secret,
+        secretOrKey: configService.get('JWT_ACCESS_TOKEN_SECRET_KEY'),
       });
     }
 
-    async validate(payload: User): Promise<User> {
+    async validate(payload: Payload): Promise<Payload> {
       return payload;
     }
   }
   // highlight-end
   ```
 
-  Request로부터 JWT를 추출하는 방식으로 API 요청의 Authorization 헤더에 토큰을 제공하는 방법을 
-  베어러토큰 방식을 사용하도록 합니다. 
+  Request로부터 JWT를 추출하는 방식을 fromAuthHeaderAsBearerToken으로 지정함으로써 
+  API 요청의 Authorization 헤더에 토큰을 제공하는 방법을 베어러토큰 방식을 사용하도록 합니다. 
   또한 ignoreExpiration을 명시적으로 false로 지정하여 만료된 토큰으로부터 받은 요청은 에러를 반환하도록 지정 합니다. 
   secretOrKey는 jwt.constants.ts에서 정의한 jwtConstants.secret 값을 사용하도록 합니다.
 
-  JwtStrategy 전략은 클라이언트로부터 요청을 받았을 때 요청헤더에 베어러토큰이 존재하는지 확인하며 토큰유효기간이 지나지 않았는지 
+  JwtStrategy 전략은 클라이언트로부터 요청을 받았을 때 요청헤더에 베어러토큰이 존재하는지 확인하며 토큰유효기간을 만족하는지 등을 
   확인합니다. 이러한 조건을 통과했을 때, JwtStrategy는 JWT 서명을 확인하고 JSON을 디코딩 합니다. 
   그런 다음 디코딩된 JSON을 validate() 메서드로 전달해 호출하며 마무리하게 되는데 우리는 여기서 그저 아무것도 하지 않고 
-  단지 디코딩된 JSON을 그대로 클라이언트에게 제공할 것 입니다.
+  단지 디코딩된 JSON(payload)을 그대로 클라이언트에게 제공할 것 입니다.
 
   다음으로 넘어가기 전에 Strategy 클래스가 `passport-jwt`로부터 import 된 것인지 꼭 확인하시기 바랍니다.
 
@@ -645,7 +664,16 @@ req.user에 제공해줄 것 입니다.
     imports: [
       UsersModule,
       PassportModule,
-      JwtModule.register({ secret: jwtConstants.secret, signOptions: { expiresIn: 3600 } }),
+      JwtModule.registerAsync({
+        imports: [ConfigModule],
+        inject: [ConfigService],
+        useFactory: async (configService: ConfigService) => ({
+          secret: configService.get('JWT_ACCESS_TOKEN_SECRET_KEY'),
+          signOptions: {
+            expiresIn: +configService.get('JWT_ACCESS_TOKEN_EXPIRATION_TIME'),
+          },
+        }),
+      }),
     ],
     // highlight-next-line
     providers: [AuthService, LocalStrategy, JwtStrategy],
@@ -765,8 +793,8 @@ JwtStrategy를 테스트 하면서 문제가 없는지 확인하도록 합시다
 
 JWT는 저장소 또는 데이터베이스에 정보를 저장하는 세션과 달리 어디에도 저장하지 않고 단지 토큰 형태로 전송되며 
 누군가 토큰을 탈취해가도 수정하게 되면 토큰이 변경되기 때문에 바로 알아챌 수 있다는 장점등이 존재하지만 
-암호화가 풀린다면 사용자의 정보가 그대로 노출되기 때문에 페이로드에 담을 수 있는 정보에는 한계가 있어어 
+암호화가 풀린다면 사용자의 정보가 그대로 노출되기 때문에 페이로드에 담을 수 있는 정보에는 한계가 있어 
 최소한의 정보만을 담고 있어야 한다는 것과 토큰이 한번 생성되면 삭제할 수 없다는 단점등이 있습니다.
 
-이러한 단점을 해결하기 위한 방법으로 토큰의 생성주기를 짧게 만들거나 refresh_token의 발급과 같은 해결책이 필요하며 
+이러한 단점을 해결하기 위한 방법으로 토큰의 만료주기를 짧게 만들거나 refresh_token의 발급과 같은 해결책이 필요하며 
 우리가 선택한 인증방식의 취약점을 잘 고려해야 할 것 입니다. :sunglasses:
