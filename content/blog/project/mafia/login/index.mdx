@@ -39,7 +39,8 @@ Passport에는 인증 메커니즘을 구현하는 여러가지 전략을 구성
   }
   ```
 
-  클라이언트로부터 eamil을 입력받았을 때 user가 존재한다면 반환할 것이고 그렇지 않다면 error를 줄 것 입니다.
+  클라이언트로부터 eamil을 입력받았을 때 email을 가진 user가 존재한다면 반환할 것이고 그렇지 않다면 error를 주도록 하는 
+  Dto를 생성합니다.
 
 2. Find One User Service
 
@@ -70,12 +71,12 @@ Passport에는 인증 메커니즘을 구현하는 여러가지 전략을 구성
   }
   ```
 
-  데이터베이스로부터 유저가 존재하지 않다면 :point_right: `ts$return { ok: false, error: '해당 유저를 찾을 수 없습니다.' }` 
+  데이터베이스로부터 email을 가진 유저가 존재하지 않는다면 :point_right: `ts$return { ok: false, error: '해당 유저를 찾을 수 없습니다.' }` 
   유저가 존재한다면 :point_right: `ts$return { ok: true, user }`를 반환합니다.
 
 ## Validate User
 
-유저를 찾은 후 유저를 검증해보는 절차를 구현합니다.
+유저를 찾았다면 유저를 검증해보는 절차를 구현합니다.
 
 1. auth.module.ts 생성
 
@@ -99,6 +100,8 @@ Passport에는 인증 메커니즘을 구현하는 여러가지 전략을 구성
     user?: User;
   }
   ```
+
+  유저에게 email과 password를 입력받고 검증을 통해 유저의 정보 또는 에러를 클라이언트에게 줄 것 입니다.
 
 3. auth.service.ts 생성
 
@@ -134,6 +137,10 @@ Passport에는 인증 메커니즘을 구현하는 여러가지 전략을 구성
   }
   ```
 
+  패스워드가 일치하는지 확인하는 메서드 입니다. 
+  서비스 로직으로 구현하지 않고 엔티티 파일에서 작성하는 이유는 여러곳에서 사용될 수 있을 가능성을 생각해 
+  공유할 수 있는 방식을 마련하기 위함입니다.
+
   `src/auth/auth.service.ts`
   ```ts
   import { Injectable } from '@nestjs/common';
@@ -165,13 +172,15 @@ Passport에는 인증 메커니즘을 구현하는 여러가지 전략을 구성
     // highlight-end
   ```
 
-  usersService의 findOneUser 메서드로부터 user가 있는지 검증, 
-  user가 존재한다면 패스워드 입력이 일치했는지 검증한다. 
+  우리가 처음에 작성한 usersService의 `findOneUser` 메서드로부터 user가 있는지 검증, 
+  그리고 user가 존재한다면 패스워드 입력이 유저의 패스워드와 일치했는지 검증합니다. 
   검증 도중 에러가 발생하면 `ts$return { ok: false, error: '로그인 인증에 실패하였습니다.' }`를 리턴합니다.
 
 ## Passport Local Strategy 구현
 
-Passport에서 제공하는 Local Strategy를 구현하여 유효한 사용자를 반환할 것 입니다.
+지금까지 로그인에서 email을 가진 `유저의 존재유무`를 확인하고 `password까지 검증`하는 단계까지 마쳤습니다. 
+우리는 이제 지금까지 구현해온 사용자 유무와 검증 단계를 Passport에서 제공하는 `Local Strategy`내에서 구현하여 
+사용자 계정/비밀번호를 통해 유효한 사용자를 반환할 것 입니다.
 
 1. 패키지 설치
 
@@ -217,6 +226,8 @@ Passport에서 제공하는 Local Strategy를 구현하여 유효한 사용자�
   }
   ```
 
+  `User` 클래스를 plain 형태로 변환하는 메서드로 변환하는 동시에 password가 필드에서 제외됩니다.
+
   :heavy_plus_sign: `src/auth/strategies/local.strategy.ts`
   ```ts{numberLines: true}
   import { AuthService } from '@auth/auth.service';
@@ -257,22 +268,23 @@ Passport에서 제공하는 Local Strategy를 구현하여 유효한 사용자�
   }
   ```
 
-  Passport LocalStrategy를 구현하는 부분으로 가장 중요한 역할을 합니다. 
-  10 ~ 13라인을 자세히 보면 설치해온 라이브러리로부터 클래스를 연장합니다. 
-  PassportStrategy(Strategy)에서 `Strategy`는 반드시 passport-local로부터 import 해와야 합니다. 
-  에디터에서 Strategy를 클릭해보면 어떠한 타입으로 정의했는지 살펴볼 수 있습니다. 
-  여기서 constructor의 options를 확인해보면 usernameField가 있는 것을 알 수 있는데 
-  이는 무엇을 username으로 지정할지 선택하는 것 입니다. 
-  기본적으로 username으로 지정되어 있으나 저는 email 필드를 사용해 로그인을 진행할 것이므로 수정하도록 하겠습니다.
-
-  그리고 LocalStrategy는 `validate` 메서드를 가지는데 주의할 점은 반드시 `validate` 이름을 가진 메서드로 구현해야 한다는 점입니다. 
+  로그인 단계 중 Passport LocalStrategy를 구현하는 부분으로 로그인의 가장 중요한 역할을 합니다. 
+  먼저 10 ~ 13라인을 살펴보면 `PassportStrategy(Strategy)`의 `usernameField`를 email로 다시 지정한 것을 알 수 있습니다. 
+  이는 어떤 필드를 username으로 지정할지 선택하는 것으로 
+  기본적으로 username으로 지정되어 있으나 저는 email 필드를 사용해 로그인을 진행할 것이므로 수정한 것 입니다. 
+  usernameField가 궁금하다면 에디터에서 Strategy를 클릭해 어떠한 타입으로 정의했는지 살펴볼 수 있습니다. 
+  
+  주의해야 할 점은 PassportStrategy(Strategy)에서 `Strategy`는 반드시 passport-local로부터 import 해와야 합니다. 
+  Strategy가 생각보다 많이 존재하므로 잘못 가져와 사용하면 무의미하게 됩니다.
+  그리고 LocalStrategy는 `validate` 메서드를 가지는데 반드시 `validate` 이름을 가진 메서드로 구현해야 한다는 점입니다. 
   이는 우리가 선택하는 것이 아닌 `@nestjs/passport` 로부터 주어진 룰입니다. 
   이 룰을 따르지 않고 메서드명을 마음대로 한다면 로그인을 할 수 없을 것 입니다.
 
-  마지막으로 valite 메서드에서 24 ~ 25번 라인을 살펴보면 user에 이상한 작업을 하는 것을 알 수 있습니다. 
-  Passport는 전략을 통과한 사용자에게 req.user 속성으로 user 객체를 반환하게 되는데 그대로 반환하게 되면 
-  req.user에 password를 가진 user를 반환하게 됩니다. 
+  마지막으로 validate 메서드에서 24 ~ 25번 라인을 살펴보면 user를 plain형태로 변환 하는 것을 알 수 있습니다. 
+  Passport LocalStrategy 전략은 전략을 통과한 사용자에게 Request객체의 user 속성으로 사용자의 정보를 반환하게 되는데
+  만약 아무런 필터없이 user객체를 반환하게 될 시, password를 가진 user를 반환하게 되기 때문에 plain 형태를 거쳐 다시 User 클래스로 변환하여 리턴하는 부분입니다.
 
+  `Bad Example`
   ```
   User {
     id: 1,
@@ -285,7 +297,7 @@ Passport에서 제공하는 Local Strategy를 구현하여 유효한 사용자�
 
   이와 같이 user를 클라이언트 측에 제공하는 것은 보안면으로 매우 좋지 않습니다. 
   저는 password를 클라이언트에 노출하고 싶지 않기 때문에 24 ~ 25번 라인과 같은 후속조치를 한 것 입니다. 
-  방법은 두가지를 생각해볼 수 있는데 첫번째는 user객체에서 password를 뺀 나머지 속성만 반환하는 것. 
+  물론 이러한 방법이 아니라 가장 심플하게 user의 password를 제외한 user를 반환하는 로직을 구현해도 되며 
   또는 저처럼 `class-transformer` 라이브러리를 활용해보는 방법이 있습니다.
 
   ```ts
@@ -298,8 +310,9 @@ Passport에서 제공하는 Local Strategy를 구현하여 유효한 사용자�
   위 코드는 아까 위에서 user.entity.ts에서 password 필드에 적용한 @Exclude 데코레이터 입니다. 
   이 데코레이터의 속성으로 `ts${ toPlainOnly: true }`를 적용했는데 이것이 무슨 뜻인가 하면 
   plain 상태일 때는 password를 제공하지 않음을 나타냅니다. 
-  따라서 LocalStrategy 전략으로 req.user을 보내기전에 `classToPlain` 메서드를 통해 User 클래스를 plain으로 변경하는 것 입니다.
-  그렇다고 palin 타입으로 반환하면 타입 오류가 발생하므로 다시 `plainToClass` 메서드로 변경하여 리턴하도록 합시다.
+  따라서 LocalStrategy 전략 성공으로 req.user을 반환하기 전에 `classToPlain` 메서드를 통해 User 클래스를 plain으로 변경하는 것 입니다.
+  하지만 palin 타입으로 반환하면 타입 오류가 발생하며 무엇보다 나중에 user 클래스의 메서드나 필드를 사용할 수 없으므로 
+  다시 `plainToClass` 메서드로 변경하여 리턴하도록 합시다.
 
 ## Local Login
 
