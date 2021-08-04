@@ -392,3 +392,39 @@ refreshToken을 쿠키에 저장하였습니다. :grin:
 ![Silent Refresh Result](./gatsby-project-mafia-security-08.PNG 'Silent Refresh Result')
 
 refreshToken값을 변경하니 에러를 받았습니다. :persevere:
+
+## 이대로 괜찮은가?
+
+지금까지 Silent Refresh API를 사용해 refreshToken으로부터 accessToken을 발급받는 방법을 알아보았습니다. 
+하지만 여기까지 구현하고서 저는 몇가지 의문이 들었습니다. 
+
+> refreshToken이 과연 필요한 것인가?
+
+아무리 생각해도 이해할 수 없는 부분은 refreshToken에 관한 부분이었습니다. 
+
+> 만약 해커가 refreshToken을 탈취해간다면?
+
+XSS 보안을 제대로 구현하지 못해 해커가 refreshToken을 탈취해간다면 정상적인 사용자인 척 silent-refresh API를 서버에 요청해 accessToken을 
+탈취당하는 것은 당연한 수순입니다. 
+그리고 refreshToken이 하는 일은 accessToken으로도 구현할 수 있다는 입장도 나오고 있습니다. 
+결국 accessToken으로 하나 refreshToken으로 하나 똑같이 탈취당하는 것은 분명한데 굳이 refreshToken으로 accessToken을 발급하는 이유가 있을까 생각이 들기 시작했습니다. 
+
+이 문제는 개발자들 사이에서도 필요하다, 필요하지 않다로 나뉘어 토론을 할 정도로 큰 주제인 듯 합니다. 
+:point_right: [refresh token이 왜 필요한가](https://stackoverflow.com/questions/27726066/jwt-refresh-token-flow)를 읽어보고 refreshToken이 왜 필요한지에 
+대해 내 나름대로 생각해본 결과 다음과 같은 이유가 존재한다고 생각합니다.
+
+- accessToken을 사용해 인증방식을 구현한 경우
+
+  1. accessToken의 만료기간을 길게 잡았다고 가정하며 만약 해커가 accessToken을 탈취해갔을 경우 accessToken을 무력화시킬 수 있는 방법이 존재하지 않다. 
+  2. jwt는 쿠키-세션 방식과 다르게 한번 발급해주면 만료기간이 지날때까지 삭제할 수 없기 때문이다. 
+  3. 때문에 해커는 계속해서 accessToken으로 accessToken을 재발급하여 사용할 수 있게 된다.
+
+- refreshToken을 사용해 인증방식을 구현한 경우
+
+  1. accessToken의 만료기간을 짧게 잡아도 accessToken을 재발급해줄 수 있는 refreshToken이 존재한다. 
+  2. 만약 해커가 accessToken을 탈취해가도 refreshToken이 없다면 accessToken을 재발급 받을 수 없다. 
+  3. 하지만 refreshToken까지 탈취해간다면 accessToken이 탈취되는 것은 한순간이다.
+
+즉, 두 방법 모두 accessToken이 탈취당할 수 있다는 공통점이 존재하지만 서버 입장에서는 accessToken이 탈취되었을 때 가장 최악인 상황을 고려해 accessToken이 
+탈취되어도 짧은 만료기간을 가지게 하고 refreshToken으로 accessToken을 발급받는 것이 refreshToken을 사용하는 입장입니다. 
+문제는 refreshToken을 탈취당하면 결국엔 accessToken을 사용해 인증방식을 구현한 경우의 결과가 똑같아 질 것이라는 것 입니다.
