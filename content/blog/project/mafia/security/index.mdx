@@ -169,23 +169,6 @@ refreshToken의 발급 과정은 아래와 같습니다.
 
   accessToken + refreshToken을 함께 발급 받도록 코드 수정
 
-  `src/auth/auth.controller.ts`
-  ```ts
-  import { Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
-  ...
-
-  export class AuthController {
-    /* Post Login Controller */
-    @UseGuards(LocalAuthGuard)
-    @Post('login')
-    // highlight-start
-    async login(@Req() req: RequestWithUser, @Res({ passthrough: true }) res: Response): Promise<LoginAuthOutputDto> {
-      return this.authService.login(res, req.user);
-    }
-    // highlight-end
-  }
-  ```
-
   `src/auth/auth.service.ts`
   ```ts{numberLines: true}
   @Injectable()
@@ -234,20 +217,38 @@ refreshToken의 발급 과정은 아래와 같습니다.
   }
   ```
 
+  `src/auth/auth.controller.ts`
+  ```ts
+  import { Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
+  ...
+
+  export class AuthController {
+    /* Post Login Controller */
+    @UseGuards(LocalAuthGuard)
+    @Post('login')
+    // highlight-start
+    async login(@Req() req: RequestWithUser, @Res({ passthrough: true }) res: Response): Promise<LoginAuthOutputDto> {
+      return this.authService.login(res, req.user);
+    }
+    // highlight-end
+  }
+  ```
+
   로그인 진행 시, req.user의 값을 확인함으로써 로그인이 제대로 이루어졌는지 확인합니다. 
   이후 accessToken과 refreshToken을 발급하고 refreshToken은 쿠키로, accessToken은 json형태로 응답하도록 합니다. 
 
   (참고) 27, 28번 라인을 살펴보면 쿠키를 적용할 때 옵션을 줄 수 있는데 expires는 알다시피 만료기간을 정하는 속성이고 httpOnly 속성이 무엇인지 궁금하실텐데 
   이는 XSS공격을 방어할 수 있는 수단으로 만약에 해커가 자바스크립트를 삽입해 쿠키를 탈취하려는 시도가 발생할 때 접근할 수 없도록 막아주는 역할을 하게 됩니다. 
-  추후에 https에서만 쿠키를 가져올 수 있게 하는 secure 옵션도 적용할 것이지만 지금은 로컬환경에서 개발중이므로 나중에 배포할 때 적용해주는 것도 좋은 방법일 
-  듯 합니다.
+  하지만 XSS 공격 수단이 주어진다면 쿠키 하이재킹이 이루어져 탈취될 가능성이 있다고 하니 따로 XSS 보안을 구축하는 것이 좋을 것 같습니다. 
+  그리고 https에서만 쿠키를 가져올 수 있게 하는 secure 옵션도 적용할 것이지만 지금은 로컬환경에서 개발중이므로 나중에 배포할 때 적용해주는 것도 
+  좋은 방법일 듯 합니다.
 
   추후에 프론트에서는 accessToken을 사용해 인가를 받아 로그인 상태임을 확인받으며 필요하다면 쿠키에 담긴 refreshToken을 서버로 보내 
   쿠키에 담긴 refreshToken값이 유효한지 확인하고 accessToken과 refreshToken을 재발급 받는 과정도 해볼 것 입니다.
 
 이제 여기까지 해본 것을 테스트 해보도록 합시다.
 
-1. 로그인 테스트 결과
+- 로그인 테스트 결과
 
 ![Login Test Result](./gatsby-project-mafia-security-01.PNG 'Login Test Result')
 
@@ -260,3 +261,134 @@ accessToken을 성공적으로 발급했습니다. :grin:
 ![Cookie](./gatsby-project-mafia-security-03.PNG 'Cookie')
 
 refreshToken을 쿠키에 저장하였습니다. :grin:
+
+## Silent Refresh
+
+이번에 생각해볼 것은 로그인 이후에 페이지가 새로고침되거나 사이트가 종료될 때 어떻게 처리해야할까를 생각해봅시다. 
+만약 페이지가 새로고침되거나 사이트가 종료된 후 다시 접속하게 되었을 때 accessToken을 잃어버리지 않도록 해야합니다. 
+하지만 실제로 accessToken을 붙잡는 것은 불가능하며 대신에 accessToken을 재발급하여 사용하는 방법을 사용하도록 해야 합니다. 
+accessToken을 재발급 하기 위해 필요한 것이 바로 `refreshToken`이며 페이지가 리프레시 될 때 refreshToken을 조용히 서버에 전송해 accessToken을 
+재발급받는 방법을 `Silent Refresh`라고 명칭하는 듯 합니다. 
+로그인을 한지 오랜시간이 되었는데도 다시 접속했을 때 로그인이 유지되어 있는 경우를 경험하신 적이 있나요? 
+바로 그러한 경우가 해당이 됩니다. 
+만약 페이지가 새로고침되거나 사이트가 종료될 때 `silent-refresh` API를 서버에 전송할 수 있다면 그 이후에도 accessToken을 접근할 수 있지 않을까요?
+
+따라서 우리는 accessToken과 refreshToken을 재발급 받을 수 있는 Silent Refresh 로직을 구현해 보도록 할 것 입니다.
+
+1. Dto 생성
+
+  :heavy_plus_sign: `src/auth/dtos/silent-refresh-auth.dto.ts`
+  ```ts
+  import { CoreOutput } from '@common/dtos/core.dto';
+  import { IsOptional, IsString } from 'class-validator';
+
+  export class SilentRefreshAuthOutputDto extends CoreOutput {
+    @IsOptional()
+    @IsString()
+    accessToken?: string;
+  }
+  ```
+
+2. Silent Refresh 로직 구현
+
+  `src/auth/auth.service.ts`
+  ```ts
+  @Injectable()
+  export class AuthService {
+    ...
+    /* Silent Refresh Service */
+    async silentRefresh(req: Request, res: Response): Promise<SilentRefreshAuthOutputDto> {
+      try {
+        // refreshToken 유효성 검사
+        // highlight-start
+        const getRefreshToken = req.cookies['refreshToken'];
+        if (!getRefreshToken) return { ok: false, error: '쿠키를 가지고 있지 않습니다.' };
+        const refreshTokenPayload: RefreshTokenPayload = await this.jwtService.verify(getRefreshToken, {
+          secret: this.configService.get('JWT_REFRESH_TOKEN_SECRET_KEY'),
+        });
+        // highlight-end
+
+        // refreshToken & accessToken 재발급
+        const payload = { id: refreshTokenPayload.id };
+        const accessToken = this.jwtService.sign(payload, {
+          secret: this.configService.get('JWT_ACCESS_TOKEN_SECRET_KEY'),
+          expiresIn: +this.configService.get('JWT_ACCESS_TOKEN_EXPIRATION_TIME'),
+        });
+        const refreshToken = this.jwtService.sign(payload, {
+          secret: this.configService.get('JWT_REFRESH_TOKEN_SECRET_KEY'),
+          expiresIn: +this.configService.get('JWT_REFRESH_TOKEN_EXPIRATION_TIME'),
+        });
+
+        // 쿠키 설정
+        res.cookie('refreshToken', refreshToken, {
+          expires: new Date(Date.now() + +this.configService.get('JWT_REFRESH_TOKEN_EXPIRATION_TIME')),
+          httpOnly: true,
+        });
+        return {
+          ok: true,
+          accessToken,
+        };
+      } catch (error) {
+        return { ok: false, error: '로그인 연장에 실패하였습니다.' };
+      }
+    }
+  }
+  ```
+
+  `src/auth/auth.controller.ts`
+  ```ts
+  import { Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
+  import { Request, Response } from 'express';
+
+  export class AuthController {
+    ...
+
+    /* Post Silent Refresh Controller */
+    // highlight-start
+    @Post('silent-refresh')
+    async silentRefresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+      return this.authService.silentRefresh(req, res);
+    }
+    // highlight-end
+  }
+  ```
+
+  Silent Refresh 서비스는 로그인 서비스와 굉장히 유사한 구조를 가지고 있습니다. 
+  한가지 다른점은 쿠키에서 refreshToken값을 가져와 그 값이 유효한지 확인하는 것 입니다. 
+  만약 refreshToken이 디코딩되었을 때 유효하지 않다면 누군가가 refreshToken을 탈취해 값을 바꿧다는 의미가 되며 accessToken과 refreshToken의 재발급을 
+  하지 않고 에러를 반환하도록 하는 것 입니다. 
+  반대로 refreshToken값이 유효하다면 accessToken과 refreshToken을 생성해 다시 쿠키와 json형태로 응답해주게 됩니다.
+
+  이러한 형태의 토큰 발급 패턴은 어떠신가요? :smile:
+  현재 실질적으로 인증되었는지를 결정하는 것은 accessToken입니다. 
+  하지만 악성 사용자가 접근할 수 있는 값은 쿠키에 저장되어 있는 refreshToken값으로 accessToken에 바로 접근할 수 없습니다. 
+  따라서 accessToken을 얻을 수 있는 방법은 오로지 로그인 또는 silent-refresh API를 통해 accessToken을 재발급 받는 방법 뿐 입니다.
+
+이제 Silent Refresh를 테스트 해보겠습니다.
+
+- Silent Refresh 성공
+
+![Silent Refresh Result](./gatsby-project-mafia-security-04.PNG 'Silent Refresh Result')
+
+accessToken을 성공적으로 재발급했습니다. :grin:
+
+![Silent Refresh Result](./gatsby-project-mafia-security-05.PNG 'Silent Refresh Result')
+
+응답쿠키로 refreshToken을 성공적으로 재발급했습니다. :grin:
+
+![Cookie](./gatsby-project-mafia-security-06.PNG 'Cookie')
+
+refreshToken을 쿠키에 저장하였습니다. :grin:
+
+- Silent Refresh 실패
+
+실패했을 때를 가정해보도록 합시다. 
+만약 누군가 refreshToken의 값을 탈취해 고의적으로 수정하였을 때 결과가 어떻게 출력되는지 확인해 볼까요?
+
+![Silent Refresh Result](./gatsby-project-mafia-security-07.PNG 'Silent Refresh Result')
+
+조금 전에 Silent Refresh를 성공하고 받은 refreshToken값을 임의로 바꾸고 저장합니다.
+
+![Silent Refresh Result](./gatsby-project-mafia-security-08.PNG 'Silent Refresh Result')
+
+refreshToken값을 변경하니 에러를 받았습니다. :persevere:
