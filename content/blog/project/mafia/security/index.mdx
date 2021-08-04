@@ -94,3 +94,169 @@ refreshToken의 발급 과정은 아래와 같습니다.
   합니다.
 
 즉, refreshToken의 역할은 accessToken이 만료되거나 accessToken의 사용이 더이상 불가능해질 때 새로 발급하도록 도와주는 역할을 하게 되는 것 입니다.
+
+## JWT refreshToken 발급
+
+이제부터 방금전에 설명한 refreshToken의 발급 Flow를 따라 refreshToken과 accessToken을 생성하는 코드를 작성해 보도록 할 것 입니다. 
+바로바로 완벽한 코드를 작성하기 보다 흐름을 이해하면서 중간에 생기는 문제점을 리팩토링하며 설명을 할 예정이오니 코드를 바로 따라치기보다 흐름을 이해하신 
+뒤에 코드를 사용하시는 것이 좋을 것 같습니다 :) :grin:
+
+1. 쿠키 설정
+
+  우리는 refreshToken과 accessToken의 발급을 위해 쿠키를 사용할 것으로 정했습니다. 
+  그리고 NestJS에서 쿠키를 사용하는 방법은 다음과 같습니다.
+
+  ```shell{outputLines: 3}
+  npm install cookie-parser // npm 설치 방식
+  npm install -D @types/cookie-parser // npm 설치 방식
+  or
+  yarn add cookie-parser // yarn 설치 방식
+  yarn add -D @types/cookie-parser // yarn 설치 방식
+  ```
+
+  `src/main.ts`
+  ```ts
+  import { ValidationPipe } from '@nestjs/common';
+  import { NestFactory } from '@nestjs/core';
+  // highlight-next-line
+  import * as cookieParser from 'cookie-parser';
+
+  import { AppModule } from '@/app.module';
+
+  async function bootstrap() {
+    const app = await NestFactory.create(AppModule);
+    app.useGlobalPipes(new ValidationPipe());
+    // highlight-next-line
+    app.use(cookieParser());
+    await app.listen(3000);
+  }
+  bootstrap();
+  ```
+
+2. 환경 변수 추가
+
+  추가해야 하는 환경 변수는 다음과 같습니다. 
+
+  `src/app.module.ts`
+  ```
+  @Module({
+    imports: [
+      ConfigModule.forRoot({
+        ...
+        validationSchema: Joi.object({
+          ...
+          // highlight-start
+          JWT_ACCESS_TOKEN_SECRET_KEY: Joi.string().required(),
+          JWT_REFRESH_TOKEN_SECRET_KEY: Joi.string().required(),
+          JWT_ACCESS_TOKEN_EXPIRATION_TIME: Joi.string().required(),
+          JWT_REFRESH_TOKEN_EXPIRATION_TIME: Joi.string().required(),
+          // highlight-end
+        }),
+      }),
+    ],
+  })
+  export class AppModule {}
+  ```
+
+  accessToken과 refreshToken의 secretKey를 다르게 적용하며 발급시간도 다르게 가져야 합니다. 
+  보통 refreshToken이 accessToken의 만료기간보다 길어야 합니다. 
+  그래야 refreshToken을 가지고 accessToken을 발급 받을 수 있게 됩니다. 
+  정해진 기간은 따로 없지만 accessToken은 1시간, refreshToken은 2주 정도로 잡는 듯 합니다. 
+  딱히 똑같이 지정할 필요는 없으며 저 역시 실제로는는 다른 시간으로 잡아줄 것 입니다. 
+  위 코드에서는 accessToken은 1시간, refreshToken은 2주로 잡아주는 것을 예시로 들 것이며 `1h`, `14 days`로 설정하도록 하겠습니다.
+
+3. 로그인 구현
+
+  accessToken + refreshToken을 함께 발급 받도록 코드 수정
+
+  `src/auth/auth.controller.ts`
+  ```ts
+  import { Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
+  ...
+
+  export class AuthController {
+    /* Post Login Controller */
+    @UseGuards(LocalAuthGuard)
+    @Post('login')
+    // highlight-start
+    async login(@Req() req: RequestWithUser, @Res({ passthrough: true }) res: Response): Promise<LoginAuthOutputDto> {
+      return this.authService.login(res, req.user);
+    }
+    // highlight-end
+  }
+  ```
+
+  `src/auth/auth.service.ts`
+  ```ts{numberLines: true}
+  @Injectable()
+  export class AuthService {
+    ...
+    /* Login Service */
+    async login(res: Response, loginAuthInputDto: LoginAuthInputDto): Promise<LoginAuthOutputDto> {
+      try {
+        const { ok, error, data } = loginAuthInputDto;
+
+      // 로그인 상태 확인
+        if (ok === false) return { ok: false, error };
+        if (data == null) return { ok: false, error: '토큰을 발급 받을 수 없습니다.' };
+
+        // refreshToken & accessToken 재발급
+        // highlight-start
+        const { id } = data;
+        const payload = { id };
+        const accessToken = this.jwtService.sign(payload, {
+          secret: this.configService.get('JWT_ACCESS_TOKEN_SECRET_KEY'),
+          expiresIn: +this.configService.get('JWT_ACCESS_TOKEN_EXPIRATION_TIME'),
+        });
+        const refreshToken = this.jwtService.sign(payload, {
+          secret: this.configService.get('JWT_REFRESH_TOKEN_SECRET_KEY'),
+          expiresIn: +this.configService.get('JWT_REFRESH_TOKEN_EXPIRATION_TIME'),
+        });
+        // highlight-end
+
+        // 쿠키 설정
+        // highlight-start
+        res.cookie('refreshToken', refreshToken, {
+          expires: new Date(Date.now() + +this.configService.get('JWT_REFRESH_TOKEN_EXPIRATION_TIME')),
+          httpOnly: true,
+        });
+        // highlight-end
+        return {
+          ok: true,
+          // highlight-next-line
+          accessToken,
+        };
+      } catch (error) {
+        console.log(error);
+        return { ok: false, error: '로그인 인증에 실패하였습니다.' };
+      }
+    }
+  }
+  ```
+
+  로그인 진행 시, req.user의 값을 확인함으로써 로그인이 제대로 이루어졌는지 확인합니다. 
+  이후 accessToken과 refreshToken을 발급하고 refreshToken은 쿠키로, accessToken은 json형태로 응답하도록 합니다. 
+
+  (참고) 27, 28번 라인을 살펴보면 쿠키를 적용할 때 옵션을 줄 수 있는데 expires는 알다시피 만료기간을 정하는 속성이고 httpOnly 속성이 무엇인지 궁금하실텐데 
+  이는 XSS공격을 방어할 수 있는 수단으로 만약에 해커가 자바스크립트를 삽입해 쿠키를 탈취하려는 시도가 발생할 때 접근할 수 없도록 막아주는 역할을 하게 됩니다. 
+  추후에 https에서만 쿠키를 가져올 수 있게 하는 secure 옵션도 적용할 것이지만 지금은 로컬환경에서 개발중이므로 나중에 배포할 때 적용해주는 것도 좋은 방법일 
+  듯 합니다.
+
+  추후에 프론트에서는 accessToken을 사용해 인가를 받아 로그인 상태임을 확인받으며 필요하다면 쿠키에 담긴 refreshToken을 서버로 보내 
+  쿠키에 담긴 refreshToken값이 유효한지 확인하고 accessToken과 refreshToken을 재발급 받는 과정도 해볼 것 입니다.
+
+이제 여기까지 해본 것을 테스트 해보도록 합시다.
+
+1. 로그인 테스트 결과
+
+![Login Test Result](./gatsby-project-mafia-security-01.PNG 'Login Test Result')
+
+accessToken을 성공적으로 발급했습니다. :grin:
+
+![Login Test Result](./gatsby-project-mafia-security-02.PNG 'Login Test Result')
+
+응답쿠키로 refreshToken을 성공적으로 발급했습니다. :grin:
+
+![Cookie](./gatsby-project-mafia-security-03.PNG 'Cookie')
+
+refreshToken을 쿠키에 저장하였습니다. :grin:
