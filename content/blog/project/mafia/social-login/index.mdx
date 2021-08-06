@@ -7,7 +7,8 @@ tags: ['NestJS', 'TypeScript', 'Passport', 'Google', 'Kakao']
 ---
 
 이번 글에서는 NestJS에서 소셜 로그인을 구현하는 방법을 소개해드리려고 합니다. 
-첫번째로 Google 로그인을 구현하고 그 다음으로 Kakao 로그인을 구현하도록 하겠습니다.
+첫번째로 Google 로그인을 구현하고 그 다음으로 Kakao 로그인을 구현하도록 하겠습니다. 
+동시에 소셜 로그인과 지난 글에서 소개드린 refreshToken 및 accessToken 발급도 함께 해보도록 할 것 입니다.
 
 ## Google 로그인 구현
 
@@ -75,7 +76,7 @@ Google 로그인을 만들기 위해서 Passport의 도움을 받도록 하겠�
   yarn add -D @types/passport-google-oauth20 // yarn 설치 방식
   ```
 
-3. Google Strategy 구현
+4. Google Strategy 구현
 
   :heavy_plus_sign: `src/auth/strategies/google.strategy.ts`
   ```ts
@@ -128,3 +129,223 @@ Google 로그인을 만들기 위해서 Passport의 도움을 받도록 하겠�
 
   - authorizationParams는 구글 로그인의 지속상태를 언제까지 유지할지를 정할 수 있습니다. 위의 설정은 로그인을 접속할 때마다 사용자로부터 로그인을 매번 
     요청하도록 합니다.
+
+5. Google DTO 생성
+
+  `src/auth/dtos/google-login-auth.dto.ts`
+  ```ts
+  import { CoreOutput } from '@common/dtos/core.dto';
+  import { IsOptional, IsString } from 'class-validator';
+
+  export class GoogleLoginAuthOutputDto extends CoreOutput {
+    @IsOptional()
+    @IsString()
+    accessToken?: string;
+  }
+  ```
+
+6. Google Strategy Type 생성
+
+  `src/auth/auth.interface.ts`
+  ```ts
+  /* Google Strategy */
+  type GoogleUser = {
+    email: string;
+    firstName: string;
+    lastName: string;
+    photo: string;
+  };
+
+  export type GoogleRequest = Request & { user: GoogleUser };
+  ```
+
+7. Google 로그인을 위해 Entity 수정
+
+  `src/users/entities/user.entity.ts`
+  ```ts
+  import * as bcrypt from 'bcrypt';
+  import { classToPlain, Exclude } from 'class-transformer';
+  import { IsEmail, IsOptional, IsString } from 'class-validator';
+  import { BeforeInsert, BeforeUpdate, Column, Entity } from 'typeorm';
+
+  import { Core } from '@common/entities/core.entity';
+
+  // highlight-start
+  export enum Provider {
+    Local,
+    Google,
+  }
+  // highlight-end
+
+  @Entity()
+  export class User extends Core {
+    @Column({ unique: true })
+    class User extends Core {
+    ...
+
+    // highlight-start
+    @Column({ nullable: true })
+    @IsOptional()
+    @IsString()
+    public photo?: string;
+    // highlight-end
+
+    @Exclude({ toPlainOnly: true })
+    // highlight-start
+    @Column({ nullable: true })
+    @IsOptional()
+    @IsString()
+    public password?: string;
+    // highlight-end
+
+    // highlight-start
+    @Column({ type: 'enum', enum: Provider, default: Provider.Local })
+    public provider: Provider;
+    // highlight-end
+
+    @BeforeInsert()
+    @BeforeUpdate()
+    // highlight-start
+    private async hashPassword() {
+      if (this.password && this.provider === Provider.Local && this.tempPassword !== this.password) {
+        this.password = await bcrypt.hash(this.password, 10);
+      }
+    }
+    // highlight-end
+  }
+  ```
+
+  구글 로그인을 추가하면서 User Entity를 수정할 필요가 생겼습니다. 
+  기존 로그인은 `password`가 필요했지만 구글 로그인은 필요하지 않습니다. 
+  반대로 기존 로그인은 `photo`를 입력받지 않지만 구글 로그인으로부터 photo를 받아올 수 있습니다. 
+  그리고 추후에 어떤 방식으로 로그인 했는지에 따라 유저 프로필을 수정할 수 있는 권한이 달라지기 때문에 `provider`가 필요합니다. 
+  마지막으로 provider가 Local방식으로 진행된 경우에만 패스워드를 해시화하도록 합니다.
+
+  이제 User Entity를 Auth 모듈에서 사용할 것이므로 구성이 필요합니다.
+
+  :point_down:
+
+  `src/auth/auth.module.ts`
+  ```ts
+  @Module({
+    imports: [
+      // highlight-next-line
+      TypeOrmModule.forFeature([User]),
+      ...
+    ],
+      // highlight-next-line
+    providers: [AuthService, LocalStrategy, JwtStrategy, GoogleStrategy],
+    controllers: [AuthController, GoogleController],
+  })
+  ```
+
+  GoogleStrategy도 같이 추가합니다.
+
+8. Google 로그인 서비스 구현
+
+  `src/auth/auth.service.ts`
+  ```ts
+  ...
+  // highlight-start
+  import { InjectRepository } from '@nestjs/typeorm';
+  import { Repository } from 'typeorm';
+  import { GoogleRequest, RefreshTokenPayload } from '@auth/auth.interface';
+  import { GoogleLoginAuthOutputDto } from '@auth/dtos/google-login-auth.dto';
+  import { Provider, User } from '@users/entities/user.entity';
+  // highlight-end
+
+  @Injectable()
+  export class AuthService {
+    constructor(
+      // highlight-next-line
+      @InjectRepository(User) private readonly userRepository: Repository<User>,
+      private readonly usersService: UsersService,
+      private readonly jwtService: JwtService,
+      private readonly configService: ConfigService,
+    ) {}
+
+    /* Google Login */
+    // highlight-start
+    async googleLogin(req: GoogleRequest, res: Response): Promise<GoogleLoginAuthOutputDto> {
+      try {
+        const {
+          user: { email, firstName, lastName, photo },
+        } = req;
+        let accessToken: string;
+        let refreshToken: string;
+
+        // 유저 중복 검사
+        const findUser = await this.userRepository.findOne({ email });
+        if (findUser && findUser.provider === Provider.Local) {
+          return { ok: false, error: '현재 계정으로 가입한 이메일이 존재합니다.' };
+        }
+
+        // 유저 생성
+        if (!findUser) {
+          const googleUser = this.userRepository.create({ email, firstName, lastName, photo, provider: Provider.Google });
+          await this.userRepository.save(googleUser);
+
+          // 생성된 구글 유저로부터 accessToken & refreshToken 발급
+          const googleUserPayload = { id: googleUser.id };
+          accessToken = this.jwtService.sign(googleUserPayload, {
+            secret: this.configService.get('JWT_ACCESS_TOKEN_SECRET_KEY'),
+            expiresIn: +this.configService.get('JWT_ACCESS_TOKEN_EXPIRATION_TIME'),
+          });
+          refreshToken = this.jwtService.sign(googleUserPayload, {
+            secret: this.configService.get('JWT_REFRESH_TOKEN_SECRET_KEY'),
+            expiresIn: +this.configService.get('JWT_REFRESH_TOKEN_EXPIRATION_TIME'),
+          });
+
+          // 쿠키 설정
+          res.cookie('refreshToken', refreshToken, {
+            expires: new Date(Date.now() + +this.configService.get('JWT_REFRESH_TOKEN_EXPIRATION_TIME')),
+            httpOnly: true,
+          });
+          return {
+            ok: true,
+            accessToken,
+          };
+        }
+
+        // 구글 가입이 되어 있는 경우
+        const findUserPayload = { id: findUser.id };
+        accessToken = this.jwtService.sign(findUserPayload, {
+          secret: this.configService.get('JWT_ACCESS_TOKEN_SECRET_KEY'),
+          expiresIn: +this.configService.get('JWT_ACCESS_TOKEN_EXPIRATION_TIME'),
+        });
+        refreshToken = this.jwtService.sign(findUserPayload, {
+          secret: this.configService.get('JWT_REFRESH_TOKEN_SECRET_KEY'),
+          expiresIn: +this.configService.get('JWT_REFRESH_TOKEN_EXPIRATION_TIME'),
+        });
+
+        // 쿠키 설정
+        res.cookie('refreshToken', refreshToken, {
+          expires: new Date(Date.now() + +this.configService.get('JWT_REFRESH_TOKEN_EXPIRATION_TIME')),
+          httpOnly: true,
+        });
+        return {
+          ok: true,
+          accessToken,
+        };
+      } catch (error) {
+        console.log(error);
+        return { ok: false, error: '구글 로그인 인증을 실패 하였습니다.' };
+      }
+    }
+    // highlight-end
+  }
+  ```
+
+  클라이언트는 구글 로그인을 마치고 callbackURL로 돌아올 때 구글 로그인 서비스를 사용하게 될 것 입니다.
+
+  - 사용자가 구글 이메일로 처음 가입을 진행한 경우
+
+    :point_right: 새로 유저를 만들고 refreshToken & accessToken을 발급합니다.
+
+  - 사용자가 구글 이메일로 가입하려 했으나 다른 방법으로 계정이 가입되어 있는 경우
+
+    :point_right: 구글 로그인을 정지하고 원래 가입한 방법으로 라우팅
+
+  - 사용자가 구글 이메일로 이미 가입한 경우
+
+    :point_right: refreshToken & accessToken을 발급
