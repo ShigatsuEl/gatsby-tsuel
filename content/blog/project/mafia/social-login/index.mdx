@@ -233,9 +233,9 @@ Google 로그인을 만들기 위해서 Passport의 도움을 받도록 하겠�
       TypeOrmModule.forFeature([User]),
       ...
     ],
-      // highlight-next-line
+    // highlight-next-line
     providers: [AuthService, LocalStrategy, JwtStrategy, GoogleStrategy],
-    controllers: [AuthController, GoogleController],
+    controllers: [AuthController],
   })
   ```
 
@@ -349,3 +349,174 @@ Google 로그인을 만들기 위해서 Passport의 도움을 받도록 하겠�
   - 사용자가 구글 이메일로 이미 가입한 경우
 
     :point_right: refreshToken & accessToken을 발급
+
+9. Google Controller 구현
+
+  `src/auth/auth.controller.ts`
+  ```ts
+  // highlight-start
+  import { Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
+  import { AuthGuard } from '@nestjs/passport';
+  import { GoogleRequest, RequestWithUser } from '@auth/auth.interface';
+  import { GoogleLoginAuthOutputDto } from '@auth/dtos/google-login-auth.dto';
+  import { LocalAuthGuard } from '@auth/guards/local-auth.guard';
+  // highlight-end
+  ...
+
+  @Controller('google')
+  export class GoogleController {
+    constructor(private readonly authService: AuthService) {}
+
+    /* Get Google Auth */
+    // highlight-start
+    @Get()
+    @UseGuards(AuthGuard('google'))
+    async googleAuth(@Req() _req: Request) {}
+    // highlight-end
+
+    /* Get Google Auth Callback */
+    // highlight-start
+    @Get('callback')
+    @UseGuards(AuthGuard('google'))
+    async googleAuthCallback(
+      @Req() req: GoogleRequest,
+      @Res({ passthrough: true }) res: Response,
+    ): Promise<GoogleLoginAuthOutputDto> {
+      return this.authService.googleLogin(req, res);
+    }
+    // highlight-end
+  }
+  ```
+
+  `src/auth/auth.module.ts`
+  ```ts
+  @Module({
+    ...
+    providers: [AuthService, LocalStrategy, JwtStrategy, GoogleStrategy],
+    // highlight-next-line
+    controllers: [AuthController, GoogleController],
+  })
+  ```
+
+  `http://localhost:4000/google`을 접속하면 사용자는 구글 사이트로 이동해 인증을 받게 됩니다. 
+  인증을 마친 사용자는 다시 callbackURL인 `http://localhost:4000/google/callback`으로 돌아와 req.user에 유저정보를 넘겨주게 됩니다. 
+  받은 유저정보를 googleLogin 서비스에 넘겨주어 refreshToken & accessToken을 발급받거나 다른 계정으로 가입되어 있다는 것을 알게 됩니다. 
+  accessToken과 refreshToken이 있기 때문에 Local 로그인과 동일하게 Authorization을 할 수 있게 됩니다.
+
+## Google Login Refactory
+
+여기까지 따라오셨다면 구글 로그인을 성공적으로 구현한 것 입니다. 
+조금 아쉬운 부분은 Google Login Service가 중복된 코드가 많다는 점입니다. 
+구글 이메일로부터 유저를 존재여부에 따라 다르게 유저를 가져오기 때문에 refreshToken과 accessToken을 발급하는 코드를 중복하여 작성했습니다. 
+만약 typeorm에 `findOneOrCreate`와 같은 메서드가 있었다면 이렇게 중복되게 코드를 작성하지 않아도 되었을 것 입니다. 
+
+놀랍게도 findOneOrCreate 메서드를 구현하는 방법이 있습니다. 
+코드를 리팩토링하게 되면 NestJS가 지원하는 커스텀 레포지토리 덕분에 얼마든지 메서드를 구현할 수 있다는 것을 깨닫게 될 것 입니다.
+
+1. Custom Repository 구현
+
+  :heavy_plus_sign: `src/users/repositories/user.repository.ts`
+  ```ts
+  import { DeepPartial, EntityRepository, FindConditions, Repository } from 'typeorm';
+
+  import { User } from '@users/entities/user.entity';
+
+  @EntityRepository(User)
+  export class UserRepository extends Repository<User> {
+    async findOneOrCreate(conditions: FindConditions<User>, entityLike: DeepPartial<User>): Promise<User> {
+      try {
+        const findUser = await this.findOne(conditions);
+        if (findUser) return findUser;
+        const createUser = this.create(entityLike);
+        await this.save(createUser);
+        return createUser;
+      } catch (error) {
+        throw new Error('사용자를 찾거나 생성하는데 실패하였습니다');
+      }
+    }
+  }
+  ```
+
+  User Repository를 확장하여 findOneOrCreate 메서드를 구현합니다. 
+  유저를 찾으면 찾은 유저를 반환하고 없다면 새 유저를 생성하도록 합니다.
+
+2. Custom Repository 적용
+
+  `src/auth/auth.module.ts`
+  ```ts
+  import { UserRepository } from '@users/repositories/user.repository';
+
+  @Module({
+    // highlight-next-line
+    TypeOrmModule.forFeature([UserRepository]),
+    ...
+  })
+  ```
+
+  `src/auth/auth.service.ts`
+  ```ts
+  ...
+  // highlight-start
+  import { Provider } from '@users/entities/user.entity';
+  import { UserRepository } from '@users/repositories/user.repository';
+  // highlight-end
+
+  @Injectable()
+  export class AuthService {
+    constructor(
+      // highlight-next-line
+      private readonly userRepository: UserRepository,
+      private readonly usersService: UsersService,
+      private readonly jwtService: JwtService,
+      private readonly configService: ConfigService,
+    ) {}
+
+    /* Google Login */
+    // highlight-start
+    async googleLogin(req: GoogleRequest, res: Response): Promise<GoogleLoginAuthOutputDto> {
+      try {
+        const {
+          user: { email, firstName, lastName, photo },
+        } = req;
+
+        // 유저 중복 검사
+        const findUser = await this.userRepository.findOneOrCreate(
+          { email },
+          { email, firstName, lastName, photo, provider: Provider.Google },
+        );
+        if (findUser && findUser.provider !== Provider.Google) {
+          return { ok: false, error: '현재 계정으로 가입한 이메일이 존재합니다.' };
+        }
+
+        // 구글 가입이 되어 있는 경우 accessToken 및 refreshToken 발급
+        const findUserPayload = { id: findUser.id };
+        const accessToken = jwt.sign(findUserPayload, this.configService.get('JWT_ACCESS_TOKEN_SECRET_KEY'), {
+          expiresIn: +this.configService.get('JWT_ACCESS_TOKEN_EXPIRATION_TIME'),
+        });
+        const refreshToken = jwt.sign({}, this.configService.get('JWT_REFRESH_TOKEN_SECRET_KEY'), {
+          expiresIn: +this.configService.get('JWT_REFRESH_TOKEN_EXPIRATION_TIME'),
+          audience: String(findUser.id),
+        });
+
+        /* refreshToken 필드 업데이트 */
+        findUser.refreshToken = refreshToken;
+        await this.userRepository.save(findUser);
+
+        // 쿠키 설정
+        res.cookie('refreshToken', refreshToken, {
+          expires: new Date(Date.now() + +this.configService.get('JWT_REFRESH_TOKEN_EXPIRATION_TIME')),
+          httpOnly: true,
+        });
+        return {
+          ok: true,
+          accessToken,
+        };
+      } catch (error) {
+        return { ok: false, error: '구글 로그인 인증을 실패 하였습니다.' };
+      }
+    }
+    // highlight-end
+  }
+  ```
+
+  좀 더 깨끗한 코드가 되지 않았나요? :blush:
