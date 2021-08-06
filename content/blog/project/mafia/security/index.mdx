@@ -1,5 +1,5 @@
 ---
-title: NestJS Refresh Token 활용하기
+title: NestJS JWT Refresh Token으로 Access Token 발급받기
 date: 2021-08-02
 slug: /blog/project/mafia/security
 categories: ['all', 'project']
@@ -37,14 +37,14 @@ tags: ['NestJS', 'TypeScript', 'Refresh-Token', 'Access-Token', 'XSS', 'CSRF']
 > 그렇다면 어떠한 방법을 사용해야 한단 말인가?? :sob:
 
 먼저 accessToken을 가지고 인증을 구현했을 상황을 생각해봅시다.
-accessToken의 인증 기간을 약 2주동안 설정하였고 해커가 accessToken을 탈취해갔다고 가정해보는 겁니다. 
+accessToken의 인증 만료기간을 약 2주동안 잡았는데 해커가 accessToken을 탈취해갔다고 가정해보는 겁니다. 
 여기서 생기는 가장 큰 문제는 해커가 accessToken을 가지고 서버에 어떠한 요청을 보내도 막을 방법이 없다는 것 입니다. 
 그저 accessToken이 만료되는 기간(2주)동안 해커가 남용하는 상황을 지켜보고 있을 수 밖에 없습니다. 
 accessToken의 단점 중 하나가 한번 생성되면 삭제할 수 있는 방법이 없기 때문입니다. 
 
 그래서 accessToken이 탈취될 때를 대비해 accessToken의 만료기간을 굉장히 짧은 기간(5분)으로 설정하려고 합니다. 
-짧은 기간이 주어졌기 때문에 설령 5분안에 accessToken을 탈취해간다고 해도 만료가 되는 시점에서 다시 accessToken을 발급 받아야 합니다. 
-때문에 accessToken을 탈취 당한 가장 최악의 케이스에도 해커의 공격을 막을 수 있습니다. 
+짧은 기간이 주어졌기 때문에 설령 5분안에 accessToken을 탈취해간다고 해도 계속해서 인증을 받기 위해선 또 다시 accessToken을 발급 받아야 합니다. 
+때문에 accessToken을 탈취 당한 가장 최악의 케이스에도 accessToken의 만료기간이 지나면 해커의 공격을 막을 수 있습니다. 
 하지만 이번에도 문제가 생겼습니다. 
 클라이언트 측에서 서비스를 이용하려고 로그인을 하였지만 인증을 진행한 5분뒤에 accessToken이 만료되어 다시 로그인을 진행해야 하는 상황이 
 발생한 것 입니다. 
@@ -64,25 +64,25 @@ refreshToken을 accessToken과 함께 사용하면 accessToken을 짧은 만료�
 1. 클라이언트가 로그인을 진행하면 JWT에 `Header` | `Payload` | `Signature`등의 정보를 JSON에 담아 서명하여 `access_token`을 발급하여 
   클라이언트에게 제공합니다.
 
-2. 서버로부터 받은 토큰을 요청헤더의 베어러토큰에 제공해 서버에 요청을 하면 서버가 토큰으로부터 유효한 사용자인지 인가(Authorization) 후 토큰을 
-  복호화(decode)하여 원래의 payload를 받아 클라이언트에게 `req.user` 형태로 제공하게 됩니다.
+2. 서버로부터 받은 액세스 토큰을 요청헤더의 베어러토큰에 제공해 서버에 요청을 하면 서버가 액세스 토큰으로부터 유효한 사용자인지 인가(Authorization) 후 
+  토큰을 복호화(decode)하여 원래의 payload를 받아 클라이언트에게 `req.user` 형태로 제공하게 됩니다.
 
 3. 따라서 JwtStrategy의 인증을 받은 사용자는 req.user로부터 사용자의 정보를 사용할 수 있게 되며 그렇지 않은 자는 로그인을 거쳐야만 할 것 입니다.
 
 이것이 accessToken의 발급 진행과정 입니다. 
 덕분에 클라이언트 측에서 accessToken 발급을 통해 Authorization(인가) 단계를 통과하여 계속해서 내가 로그인해 있음을 서버에 알려줄 수 있게 되는 것이죠. 
 하지만 페이지가 새로고침되거나 사이트가 종료하게 되면 우리가 가지고 있던 accessToken은 사라지게 되며 다시 로그인을 요청하여 accessToken을 발급 받아야 합니다. 
-그렇지 않으면 어떠한 요청을 보낼 때 요청헤더의 베어러토큰에 accessToken을 실어보낼 수 없게 되며 이는 곧 인증받은 사용자임을 증명할 수 없게 되는 것으로 직결됩니다. 
+그렇지 않으면 더이상 요청헤더의 베어러토큰에 accessToken을 실어보낼 수 없게 되며 이는 곧 인증받은 사용자임을 증명할 수 없게 되는 것으로 직결됩니다. 
 따라서 우리는 페이지가 새로고침되거나 사이트가 종료되어도 로그인 상태가 유지되어 있음을 서버에게 알려줄 **무언가**가 필요합니다. 
-즉, 저장소가 필요한데 브라우저의 저장소로 불리우는 `localStorage` 또는 `쿠키`를 이용해야 하는 것을 의미합니다. 
+즉, 기억할 저장소가 필요한데 브라우저의 저장소로 불리우는 `localStorage` 또는 `쿠키`를 이용해야 하는 것을 의미합니다. 
 
 > 하지만 아까 전에 localStorage, 쿠키를 사용해서 서버에 요청하는 것은 악성 사용자에게 공격(XSS, CSRF)을 허용할 수 있다고 하지 않았나요?
 
 맞습니다! :smiley:
 
 XSS 공격을 당하게 되면 브라우저의 localStorage 그리고 쿠키에 들어있는 값을 빼내어 인증된 사용자인 척 서버에 요청하는 일도 할 수 있게 됩니다. 
-따라서 우리는 쿠키 저장소를 이용하되, 조금이나마 공격으로부터 보호할 수 있는 방안을 생각해볼 필요가 있습니다. 
-그렇게 되면 우리가 쿠키를 이용해 페이지가 새로고침 되어도 또는 사이트가 종료되어도 accessToken을 계속해서 발급받아 사용할 수 있을 것 입니다. 
+따라서 우리는 쿠키 저장소를 이용하되, 누군가로부터 쿠키를 탈취하는 것에 대해 어떻게 방어할 것인지 생각해볼 필요가 있습니다. 
+쿠키가 안전하게 보호할 수 있다면 쿠키값을 이용해 페이지가 새로고침 되거나 사이트가 종료되어도 accessToken을 계속해서 발급받아 사용할 수 있을 것 입니다. 
 그리고 accessToken을 계속해서 발급받기 위해 우리는 하나의 토큰을 더 필요로 하게 되는데 바로 `refreshToken`의 존재 입니다. 
 refreshToken의 발급 과정은 아래와 같습니다.
 
@@ -99,7 +99,7 @@ refreshToken의 발급 과정은 아래와 같습니다.
 
 이제부터 방금전에 설명한 refreshToken의 발급 Flow를 따라 refreshToken과 accessToken을 생성하는 코드를 작성해 보도록 할 것 입니다. 
 바로바로 완벽한 코드를 작성하기 보다 흐름을 이해하면서 중간에 생기는 문제점을 리팩토링하며 설명을 할 예정이오니 코드를 바로 따라치기보다 흐름을 이해하신 
-뒤에 코드를 사용하시는 것이 좋을 것 같습니다 :) :grin:
+뒤에 코드를 사용하시는 것이 좋을 것 같습니다 :grin:
 
 1. 쿠키 설정
 
@@ -267,9 +267,10 @@ refreshToken을 쿠키에 저장하였습니다. :grin:
 
 ## Silent Refresh
 
+여기까지 로그인 진행 시 accessToken과 refreshToken을 발급받는 것을 알아보았습니다. 
 이번에 생각해볼 것은 로그인 이후에 페이지가 새로고침되거나 사이트가 종료될 때 어떻게 처리해야할까를 생각해봅시다. 
-만약 페이지가 새로고침되거나 사이트가 종료된 후 다시 접속하게 되었을 때 accessToken을 잃어버리지 않도록 해야합니다. 
-하지만 실제로 accessToken을 붙잡는 것은 불가능하며 대신에 accessToken을 재발급하여 사용하는 방법을 사용하도록 해야 합니다. 
+우리는 페이지가 새로고침되거나 사이트가 종료된 후 다시 접속하게 되었을 때 accessToken을 잃어버리지 않도록 해야합니다. 
+하지만 실제로 accessToken을 붙잡는 것은 불가능하기 때문에 대신 accessToken을 재발급하여 사용하는 방법을 사용하도록 해야 합니다. 
 accessToken을 재발급 하기 위해 필요한 것이 바로 `refreshToken`이며 페이지가 리프레시 될 때 refreshToken을 조용히 서버에 전송해 accessToken을 
 재발급받는 방법을 `Silent Refresh`라고 명칭하는 듯 합니다. 
 로그인을 한지 오랜시간이 되었는데도 다시 접속했을 때 로그인이 유지되어 있는 경우를 경험하신 적이 있나요? 
@@ -388,7 +389,7 @@ refreshToken을 쿠키에 저장하였습니다. :grin:
 실패했을 때를 가정해보도록 합시다. 
 만약 누군가 refreshToken의 값을 탈취해 고의적으로 수정하였을 때 결과가 어떻게 출력되는지 확인해 볼까요?
 
-![Silent Refresh Result](./gatsby-project-mafia-security-07.PNG 'Silent Refresh Result')
+![Silent Refresh Result](./gatsby-project-mafia-security-07.png 'Silent Refresh Result')
 
 조금 전에 Silent Refresh를 성공하고 받은 refreshToken값을 임의로 바꾸고 저장합니다.
 
@@ -408,9 +409,10 @@ refreshToken값을 변경하니 에러를 받았습니다. :persevere:
 > 만약 해커가 refreshToken을 탈취해간다면?
 
 XSS 보안을 제대로 구현하지 못해 해커가 refreshToken을 탈취해간다면 정상적인 사용자인 척 silent-refresh API를 서버에 요청해 accessToken을 
-탈취당하는 것은 당연한 수순입니다. 
+탈취당한다면 refreshToken을 구현한 의미가 없습니다. 
 그리고 refreshToken이 하는 일은 accessToken으로도 구현할 수 있다는 입장도 나오고 있습니다. 
-결국 accessToken으로 하나 refreshToken으로 하나 똑같이 탈취당하는 것은 분명한데 굳이 refreshToken으로 accessToken을 발급하는 이유가 있을까 생각이 들기 시작했습니다. 
+결국 accessToken 단독으로 인증하나 refreshToken을 같이 사용하나 똑같이 탈취당하는 것은 분명한데 굳이 refreshToken으로 accessToken을 발급하는 
+이유가 있을까 생각이 들기 시작했습니다. 
 
 이 문제는 개발자들 사이에서도 필요하다, 필요하지 않다로 나뉘어 토론을 할 정도로 큰 주제인 듯 합니다. 
 :point_right: [refresh token이 왜 필요한가](https://stackoverflow.com/questions/27726066/jwt-refresh-token-flow)를 읽어보고 refreshToken이 왜 필요한지에 
@@ -420,7 +422,6 @@ XSS 보안을 제대로 구현하지 못해 해커가 refreshToken을 탈취해�
 
   1. accessToken의 만료기간을 길게 잡았다고 가정하며 만약 해커가 accessToken을 탈취해갔을 경우 accessToken을 무력화시킬 수 있는 방법이 존재하지 않다. 
   2. jwt는 쿠키-세션 방식과 다르게 한번 발급해주면 만료기간이 지날때까지 삭제할 수 없기 때문이다. 
-  3. 때문에 해커는 계속해서 accessToken으로 accessToken을 재발급하여 사용할 수 있게 된다.
 
 - refreshToken을 사용해 인증방식을 구현한 경우
 
@@ -428,9 +429,9 @@ XSS 보안을 제대로 구현하지 못해 해커가 refreshToken을 탈취해�
   2. 만약 해커가 accessToken을 탈취해가도 refreshToken이 없다면 accessToken을 재발급 받을 수 없다. 
   3. 하지만 refreshToken까지 탈취해간다면 accessToken이 탈취되는 것은 한순간이다.
 
-즉, 두 방법 모두 accessToken이 탈취당할 수 있다는 공통점이 존재하지만 서버 입장에서는 accessToken이 탈취되었을 때 가장 최악인 상황을 고려해 accessToken이 
-탈취되어도 짧은 만료기간을 가지게 하고 refreshToken으로 accessToken을 발급받는 것이 refreshToken을 사용하는 입장입니다. 
-문제는 refreshToken을 탈취당하면 결국엔 accessToken을 사용해 인증방식을 구현한 경우의 결과가 똑같아 질 것이라는 것 입니다.
+즉, 두 방법 모두 accessToken이 탈취당할 수 있다는 공통점이 존재하지만 서버 입장에서는 가장 최악인 상황을 고려해 accessToken이 
+탈취되어도 짧은 만료기간으로 제한을 두어 결국엔 accessToken을 재발급 받게 만들게 하는 것이 refreshToken을 사용하는 입장의 주장입니다. 
+문제는 refreshToken을 탈취당하면 결국 accessToken을 사용해 인증방식을 구현한 경우의 결과가 똑같아 질 것이라는 것 입니다.
 
 ## 그렇다면 어떻게 해야 할까?
 
@@ -448,7 +449,7 @@ accessToken은 탈취당해도 짧은 만료기간을 가지며 만료기간이 
 1. 패키지 설치
 
   `@nest/jwt` 패키지는 jsonwebtoken 패키지에 기반하여 만들어졌지만 몇가지 부분을 사용하기에 부적절한 부분이 있습니다. 
-  따라서 위 패키지 대신에 다음 패키지를 설치하도록 합니다.
+  따라서 위 패키지 대신에 다음 패키지로 대체하도록 합니다.
 
   ```shell{outputLines: 3}
   npm install jsonwebtoken // npm 설치 방식
@@ -497,10 +498,10 @@ accessToken은 탈취당해도 짧은 만료기간을 가지며 만료기간이 
     // highlight-next-line
     public lastName?: string;
 
-    // highlight-next-line
     @Column({ nullable: true })
     @IsOptional()
     @IsString()
+    // highlight-next-line
     public nickname?: string;
 
     @Column({ nullable: true })
@@ -515,10 +516,6 @@ accessToken은 탈취당해도 짧은 만료기간을 가지며 만료기간이 
     @IsString()
     // highlight-next-line
     public password?: string;
-
-    @Column({ type: 'enum', enum: Provider, default: Provider.Local })
-    // highlight-next-line
-    public provider: Provider;
 
     // highlight-start
     @Exclude({ toPlainOnly: true })
@@ -542,9 +539,10 @@ accessToken은 탈취당해도 짧은 만료기간을 가지며 만료기간이 
   }
   ```
 
-  외부에서 사용할 필드들과 메서드들은 `public`, entity 내에서만 사용할 필드들과 메서드들은 `private`으로 수정해 주었습니다. 
   중요한 부분은 refreshToken 필드를 추가한 점입니다.
-  refreshToken 필드는 나중에 refreshToken을 발급받으면서 데이터베이스에 저장하기 위함입니다.
+  나중에 refreshToken을 발급받으면서 데이터베이스에 저장하기 위함입니다. 
+  
+  외부에서 사용할 필드들과 메서드들은 `public`, entity 내에서만 사용할 필드들과 메서드들은 `private`으로 수정해 주었습니다. 
 
 4. 로그인 서비스 재구성
 
@@ -608,9 +606,11 @@ accessToken은 탈취당해도 짧은 만료기간을 가지며 만료기간이 
   이것을 가능하게 하는 친구는 jsonwebtoken sign 메서드의 `audience` 옵션 덕분입니다. 
   audience는 추후에 `payload.aud`로부터 접근할 수 있습니다.
 
-  또 다른 점은 User 데이터에 refreshToken을 저장하는 것 입니다. 
-  왜 이러한 작업을 하는지는 아래에서 설명하도록 하겠습니다. 
-  우선은 refreshToken을 위와 같이 저장하게 되면 문제점이 발생하게 되는데 이는 User의 데이터가 업데이트 되면서 패스워드도 다시 해쉬화하게 됩니다. 
+  또 다른 점은 User 스키마에 refreshToken을 저장하는 것 입니다. 
+  왜 이러한 작업을 하는지는 뒤에서 설명하도록 하겠습니다. 
+  우선은 refreshToken을 위와 같이 저장하게 되면 문제점이 발생하게 되는데 이는 User 스키마가 업데이트 되면서 패스워드가 다시 해시화하게 되어 
+  로그인에서 문제가 생길 것 입니다. 
+  따라서 다음과 같이 해시화하는 부분을 수정하도록 합니다.
 
   :point_down:
 
@@ -662,7 +662,7 @@ accessToken은 탈취당해도 짧은 만료기간을 가지며 만료기간이 
   }
   ```
 
-  업데이트 될 때 패스워드가 해쉬화 되는 것을 막기위해 다음과 같은 로직을 구성합니다. 
+  업데이트 될 때 패스워드가 해시화 되는 것을 막기위해 다음과 같은 로직을 구성합니다. 
   tempPassword 변수를 하나두고 현재 패스워드가 업데이트되는 패스워드와 일치하지 않을 경우에만 패스워드를 해쉬화 하도록 합니다.
 
 5. Silent Refresh 서비스 재구성
@@ -741,9 +741,9 @@ accessToken은 탈취당해도 짧은 만료기간을 가지며 만료기간이 
 달라진 것은 accessToken과 refreshToken의 payload를 다르게 해준 것과 데이터베이스에 refreshToken을 저장한 것 2가지라고 볼 수 있습니다. 
 전에 작성한 코드로는 accessToken이 탈취된 것은 막을 수 있었지만 refreshToken이 탈취당하면 통제할 수 없게 됩니다. 
 하지만 지금 작성한 코드로부터 refreshToken을 데이터베이스에 저장하게 되면서 누군가 refreshToken을 탈취당했을 경우 그 유저의 refreshToken을 
-삭제하면 됩니다. 
-그렇게 되면 쿠키로부터 불러온 refreshToken과 유저의 refreshToken의 값이 일치하지 않게 되면서 더이상 refreshToken과 accessToken의 재발급을 할 수 없게 
-되는 것이죠. :heart_eyes:
+데이터베이스로부터 삭제하면 됩니다. 
+그렇게 되면 해커가 refreshToken을 가지고 API를 요청해도 유저의 refreshToken의 값이 일치하지 않게 되면서 더이상 refreshToken과 accessToken의 재발급을 할 수 없게 
+되는 것이죠.(23 ~ 28라인) :heart_eyes:
 
 아시겠나요? :wink:
 전에는 refreshToken이 탈취당했을 경우 통제를 할 수 없었다면 지금은 refreshToken이 탈취당해도 해당 유저의 refreshToken을 데이터베이스로부터 
