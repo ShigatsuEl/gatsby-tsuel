@@ -3,8 +3,128 @@ title: NestJS Social Login 구현하기(Google | Kakao)
 date: 2021-08-05
 slug: /blog/project/mafia/social-login
 categories: ['all', 'project']
-tags: ['NestJS', 'TypeScript', 'Google', 'Kakao']
+tags: ['NestJS', 'TypeScript', 'Passport', 'Google', 'Kakao']
 ---
 
 이번 글에서는 NestJS에서 소셜 로그인을 구현하는 방법을 소개해드리려고 합니다. 
 첫번째로 Google 로그인을 구현하고 그 다음으로 Kakao 로그인을 구현하도록 하겠습니다.
+
+## Google 로그인 구현
+
+Google 로그인을 만들기 위해서 Passport의 도움을 받도록 하겠습니다.
+
+1. Google Application 생성
+
+  [Google Application Create](https://console.developers.google.com/ 'Google Application Create') 페이지에 접속합니다. 
+
+  ![Google Project Create](./gatsby-project-mafia-google-01.png 'Google Project Create')
+
+  ![Google Project Create](./gatsby-project-mafia-google-02.png 'Google Project Create')
+  
+  ![Google Project Create](./gatsby-project-mafia-google-03.png 'Google Project Create')
+
+  위 순서대로 프로젝트를 생성하도록 합니다.
+
+  ![Google Oauth](./gatsby-project-mafia-google-04.png 'Google Oauth')
+
+  ![Google Oauth](./gatsby-project-mafia-google-05.png 'Google Oauth')
+
+  프로젝트 생성 후, 구글 어플리케이션 동의화면을 구성합니다.
+
+  ![Google Oauth](./gatsby-project-mafia-google-06.png 'Google Oauth')
+
+  ![Google Oauth](./gatsby-project-mafia-google-07.png 'Google Oauth')
+
+  사용자 인증에 필요한 정보를 구성
+
+  ![Google Oauth](./gatsby-project-mafia-google-08.png 'Google Oauth')
+
+  모든 것이 끝나면 위와 같이 클라이언트 ID와 클라이언트 보안 비밀번호를 알려주는데 이는 반드시 페이지를 나가기전에 안전한 장소에 
+  따로 보관해둬야 합니다. 
+
+2. 환경변수 구성
+
+  `src/app.module.ts`
+  ```ts
+  ...
+  @Module({
+    imports: [
+      ConfigModule.forRoot({
+        ...
+        validationSchema: Joi.object({
+          ...
+          GOOGLE_CLIENT_ID: Joi.string().required(),
+          GOOGLE_SECRET: Joi.string().required(),
+        }),
+      }),
+      ...
+    ],
+  })
+  export class AppModule {}
+  ```
+
+  구글 어플리케이션 등록을 하면서 받은 클라이언트ID와 클라이언트 보안 비밀번호를 환경변수로 등록합니다.
+
+3. 패키지 설치
+
+  ```shell{outputLines: 3}
+  npm install passport-google-oauth20 // npm 설치 방식
+  npm install -D @types/passport-google-oauth20 // npm 설치 방식
+  or
+  yarn add passport-google-oauth20 // yarn 설치 방식
+  yarn add -D @types/passport-google-oauth20 // yarn 설치 방식
+  ```
+
+3. Google Strategy 구현
+
+  :heavy_plus_sign: `src/auth/strategies/google.strategy.ts`
+  ```ts
+  import { Injectable } from '@nestjs/common';
+  import { ConfigService } from '@nestjs/config';
+  import { PassportStrategy } from '@nestjs/passport';
+  import { Profile, Strategy, VerifyCallback } from 'passport-google-oauth20';
+
+  @Injectable()
+  export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
+    constructor(private readonly configService: ConfigService) {
+      super({
+        clientID: configService.get('GOOGLE_CLIENT_ID'),
+        clientSecret: configService.get('GOOGLE_SECRET'),
+        callbackURL: 'http://localhost:4000/google/callback',
+        scope: ['email', 'profile'],
+      });
+    }
+
+    authorizationParams(): { [key: string]: string } {
+      return {
+        access_type: 'offline',
+        prompt: 'consent',
+      };
+    }
+
+    async validate(accessToken: string, refreshToken: string, profile: Profile, done: VerifyCallback) {
+      try {
+        const { name, emails, photos } = profile;
+        const user = {
+          email: emails[0].value,
+          firstName: name.familyName,
+          lastName: name.givenName,
+          photo: photos[0].value,
+        };
+        done(null, user);
+      } catch (error) {
+        done(error);
+      }
+    }
+  }
+  ```
+
+  - clientID와 clientSecret은 환경변수로 등록한 GOOGLE_CLIENT_ID, GOOGLE_SECRET값을 입력
+
+  - callbackURL은 구글 인증을 마치고 다시 돌아올 주소를 입력합니다. 이는 구글 앱을 구성하며 사용자 인증 정보를 구성할 때 입력한 Redirect URI값과 같아야 
+    합니다.
+  
+  - validate 메서드에서는 인증을 마치면 user를 구성해 반환하고 인증 에러갑 발생하면 error를 전달
+
+  - authorizationParams는 구글 로그인의 지속상태를 언제까지 유지할지를 정할 수 있습니다. 위의 설정은 로그인을 접속할 때마다 사용자로부터 로그인을 매번 
+    요청하도록 합니다.
