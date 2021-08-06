@@ -54,8 +54,10 @@ Google 로그인을 만들기 위해서 Passport의 도움을 받도록 하겠�
         ...
         validationSchema: Joi.object({
           ...
+          // highlight-start
           GOOGLE_CLIENT_ID: Joi.string().required(),
           GOOGLE_SECRET: Joi.string().required(),
+          // highlight-end
         }),
       }),
       ...
@@ -403,6 +405,20 @@ Google 로그인을 만들기 위해서 Passport의 도움을 받도록 하겠�
   받은 유저정보를 googleLogin 서비스에 넘겨주어 refreshToken & accessToken을 발급받거나 다른 계정으로 가입되어 있다는 것을 알게 됩니다. 
   accessToken과 refreshToken이 있기 때문에 Local 로그인과 동일하게 Authorization을 할 수 있게 됩니다.
 
+구글 로그인 테스트를 진행해봅시다.
+
+- http://localhost:4000/google
+
+  ![Google Login](./gatsby-project-mafia-google-09.png 'Google Login')
+
+  로그인 화면이 떴습니다.
+
+- http://localhost:4000/google/callback
+
+  ![Google Login Result](./gatsby-project-mafia-google-10.PNG 'Google Oauth')
+
+  accessToken & refreshToken 발급 성공!
+
 ## Google Login Refactory
 
 여기까지 따라오셨다면 구글 로그인을 성공적으로 구현한 것 입니다. 
@@ -520,3 +536,269 @@ Google 로그인을 만들기 위해서 Passport의 도움을 받도록 하겠�
   ```
 
   좀 더 깨끗한 코드가 되지 않았나요? :blush:
+
+## Kakao Login 구현
+
+Kakao 로그인도 Google 로그인과 별반 다를 것이 없습니다. 
+이 아래서부터는 정말 필요한 부분 외에 코드 설명은 생략하도록 하겠습니다.
+
+1. Kakao Application 생성
+
+  [Kakao Developer Documentation](https://developers.kakao.com/ 'Kakao Developer Documentation') 접속하여 **내 어플리케이션** 버튼을 클릭합니다.
+
+  ![Kakao Application Create](./gatsby-project-mafia-kakao-01.png 'Kakao Application Create')
+  
+  어플리케이션을 추가하고 더블클릭하세요.
+
+  ![Kakao Application Configuration](./gatsby-project-mafia-kakao-02.png 'Kakao Application Configuration')
+
+  REST API 키는 환경변수로 사용될 예정이오니 안전한 장소에 보관하세요.
+
+  ![Kakao Application Configuration](./gatsby-project-mafia-kakao-03.png 'Kakao Application Configuration')
+
+  우리의 서버주소를 사이트 도메인으로 등록합니다.
+
+  ![Kakao Application Configuration](./gatsby-project-mafia-kakao-04.png 'Kakao Application Configuration')
+
+  카카오 로그인을 활성화시키고 Redirect URI를 추가합니다.
+  
+  ![Kakao Application Configuration](./gatsby-project-mafia-kakao-05.png 'Kakao Application Configuration')
+
+  카카오 로그인을 진행하여 사용자로부터 받을 정보를 선택합니다. 
+  저는 이메일, 닉네임 그리고 프로필 사진 정도만 받도록 하겠습니다.
+
+2. 환경변수 등록
+
+  `src/app.module.ts`
+  ```ts
+  ...
+  @Module({
+    imports: [
+      ConfigModule.forRoot({
+        ...
+        validationSchema: Joi.object({
+          ...
+          // highlight-next-line
+          KAKAO_CLIENT_ID: Joi.string().required(),
+        }),
+      }),
+      ...
+    ],
+  })
+  export class AppModule {}
+  ```
+
+3. 패키지 설치
+
+  ```shell{outputLines: 3}
+  npm install passport-kakao // npm 설치 방식
+  npm install -D @types/passport-kakao // npm 설치 방식
+  or
+  yarn add passport-kakao // yarn 설치 방식
+  yarn add -D @types/passport-kakao // yarn 설치 방식
+  ```
+
+4. Google Strategy 구현
+
+  :heavy_plus_sign: `src/auth/strategies/kakao.strategy.ts`
+  ```ts
+  import { Injectable } from '@nestjs/common';
+  import { ConfigService } from '@nestjs/config';
+  import { PassportStrategy } from '@nestjs/passport';
+  import { Profile, Strategy } from 'passport-kakao';
+
+  @Injectable()
+  export class KakaoStrategy extends PassportStrategy(Strategy) {
+    constructor(private readonly configService: ConfigService) {
+      super({
+        clientID: configService.get('KAKAO_CLIENT_ID'),
+        clientSecret: '',
+        callbackURL: 'http://localhost:4000/kakao/callback',
+      });
+    }
+
+    async validate(
+      accessToken: string,
+      refreshToken: string,
+      profile: Profile,
+      done: (error: any, user?: any, info?: any) => void,
+    ) {
+      try {
+        const { _json } = profile;
+        const user = {
+          email: _json.kakao_account.email,
+          nickname: _json.properties.nickname,
+          photo: _json.properties.thumbnail_image,
+        };
+        done(null, user);
+      } catch (error) {
+        done(error);
+      }
+    }
+  }
+  ```
+
+  카카오 공식문서에 의하면 clientSecret은 필수가 아니니 필요하지 않다면 빈 문자열로 사용하는 듯 합니다.
+
+5. Kakao DTO 생성
+
+  `src/auth/dtos/kakao-login-auth.dto.ts`
+  ```ts
+  import { CoreOutput } from '@common/dtos/core.dto';
+  import { IsOptional, IsString } from 'class-validator';
+
+  export class KakaoLoginAuthOutputDto extends CoreOutput {
+    @IsOptional()
+    @IsString()
+    accessToken?: string;
+  }
+  ```
+
+6. Kakao Strategy Type 생성
+
+  `src/auth/auth.interface.ts`
+  ```ts
+  ...
+  /* Kakao Strategy */
+  type KakaoUser = {
+    email: string;
+    nickname: string;
+    photo: string;
+  };
+
+  export type KakaoRequest = Request & { user: KakaoUser };
+  ```
+
+7. Kakao 로그인을 위해 Entity 수정
+
+  ``
+  ```ts
+  import * as bcrypt from 'bcrypt';
+  import { classToPlain, Exclude } from 'class-transformer';
+  import { IsEmail, IsOptional, IsString } from 'class-validator';
+  import { BeforeInsert, BeforeUpdate, Column, Entity } from 'typeorm';
+  import { Core } from '@common/entities/core.entity';
+
+  export enum Provider {
+    Local,
+    Google,
+    // highlight-next-line
+    Kakao,
+  }
+
+  @Entity()
+  export class User extends Core {
+    ...
+
+    // highlight-start
+    @Column({ nullable: true })
+    @IsOptional()
+    @IsString()
+    firstName?: string;
+    // highlight-end
+
+    // highlight-start
+    @Column({ nullable: true })
+    @IsOptional()
+    @IsString()
+    lastName?: string;
+    // highlight-end
+
+    // highlight-start
+    @Column({ nullable: true })
+    @IsOptional()
+    @IsString()
+    nickname?: string;
+    // highlight-end
+
+    ...
+  }
+  ```
+
+  카카오 로그인은 firstName 또는 lastName가 아닌 nickname을 반환하므로 다음과 같이 nickname을 추가합니다. 
+  프론트 쪽에서 firstName 또는 lastName이 없는 경우에는 nickname을 받아오도록 하겠습니다.
+
+8. Kakao 로그인 서비스 구현
+
+  `src/auth/auth.service.ts`
+  ```ts
+  ...
+  // highlight-start
+  import { GoogleRequest, KakaoRequest, RefreshTokenPayload } from '@auth/auth.interface';
+  import { GoogleLoginAuthOutputDto } from '@auth/dtos/google-login-auth.dto';
+  import { KakaoLoginAuthOutputDto } from '@auth/dtos/kakao-login-auth.dto';
+  // highlight-end
+
+  @Injectable()
+  export class AuthService {
+    constructor(
+      private readonly userRepository: UserRepository,
+      private readonly usersService: UsersService,
+      private readonly jwtService: JwtService,
+      private readonly configService: ConfigService,
+    ) {}
+
+    ...
+    /* Google Login */
+    // highlight-start
+    async kakaoLogin(req: KakaoRequest, res: Response): Promise<KakaoLoginAuthOutputDto> {
+      try {
+        const {
+          user: { email, nickname, photo },
+        } = req;
+
+        // 유저 중복 검사
+        const findUser = await this.userRepository.findOneOrCreate(
+          { email },
+          { email, nickname, photo, provider: Provider.Kakao },
+        );
+        if (findUser && findUser.provider !== Provider.Kakao) {
+          return { ok: false, error: '현재 계정으로 가입한 이메일이 존재합니다.' };
+        }
+
+        // 카카오 가입이 되어 있는 경우 accessToken 및 refreshToken 발급
+        const findUserPayload = { id: findUser.id };
+        const accessToken = jwt.sign(findUserPayload, this.configService.get('JWT_ACCESS_TOKEN_SECRET_KEY'), {
+          expiresIn: +this.configService.get('JWT_ACCESS_TOKEN_EXPIRATION_TIME'),
+        });
+        const refreshToken = jwt.sign({}, this.configService.get('JWT_REFRESH_TOKEN_SECRET_KEY'), {
+          expiresIn: +this.configService.get('JWT_REFRESH_TOKEN_EXPIRATION_TIME'),
+          audience: String(findUser.id),
+        });
+
+        /* refreshToken 필드 업데이트 */
+        findUser.refreshToken = refreshToken;
+        await this.userRepository.save(findUser);
+
+        // 쿠키 설정
+        res.cookie('refreshToken', refreshToken, {
+          expires: new Date(Date.now() + +this.configService.get('JWT_REFRESH_TOKEN_EXPIRATION_TIME')),
+          httpOnly: true,
+        });
+        return {
+          ok: true,
+          accessToken,
+        };
+      } catch (error) {
+        return { ok: false, error: '구글 로그인 인증을 실패 하였습니다.' };
+      }
+    }
+    // highlight-end
+  }
+  ```
+
+9. Kakao Controller 구현
+
+  ``
+  ```ts
+  ...
+  import { AuthController, GoogleController, KakaoController } from '@auth/auth.controller';
+  import { KakaoStrategy } from '@auth/strategies/kakao.strategy';
+
+  @Module({
+    imports: [TypeOrmModule.forFeature([UserRepository]), UsersModule, PassportModule],
+    providers: [AuthService, LocalStrategy, JwtStrategy, GoogleStrategy, KakaoStrategy],
+    controllers: [AuthController, GoogleController, KakaoController],
+  })
+  export class AuthModule {}
+  ```
