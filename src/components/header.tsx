@@ -34,11 +34,11 @@ const Header = ({ siteTitle }: HeaderProps) => (
       </h1>
       <nav>
         <ul>
-          <li>
+          {/* <li>
             <Link to="/blog" style={{ color: `white` }}>
-              Blog
+              네비게이션 리스트
             </Link>
-          </li>
+          </li> */}
         </ul>
       </nav>
     </div>

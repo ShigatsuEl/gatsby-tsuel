@@ -3,8 +3,8 @@ const emoji = require(`remark-emoji`);
 
 module.exports = {
   siteMetadata: {
-    title: `Gatsby Default Starter`,
-    description: `Kick off your next, great Gatsby project with this default starter. This barebones starter ships with the main Gatsby configuration files you might need.`,
+    title: `Tsulog`,
+    description: `Tsulog에 오신 것을 환영합니다`,
     author: `@gatsbyjs`,
   },
   plugins: [
